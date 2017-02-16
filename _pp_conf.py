@@ -42,8 +42,9 @@ def setup_diagnostics():
     cal_filename = '.diagnostics/' + 'calibration.html'
     res_filename = '.diagnostics/' + 'results.html'
 
-    return (dataroot, diagroot, index_filename,
-            reg_filename, cal_filename, res_filename)
+    return (dataroot, diagroot, index_filename, reg_filename, cal_filename,
+            res_filename)
+
 
 # suppress runtime and astropy warnings
 warnings.simplefilter(action="ignore", category=RuntimeWarning)
@@ -71,7 +72,7 @@ if rootpath is None:
 # any unique header keyword works as a potential identifier
 instrument_keys = ['INSTRUME', 'LCAMMOD']
 
-execfile(rootpath+'/setup/telescopes.py')
+execfile(rootpath + '/setup/telescopes.py')
 
 # set diagnostics root directory and logging file
 
@@ -91,7 +92,7 @@ dataroot, diagroot, index_filename, \
 log_formatline = '%(filename)s: %(message)s [%(asctime)s]'
 log_level = logging.DEBUG
 log_datefmt = '%m/%d/%Y %H:%M:%S'
-log_filename = diagroot+'LOG'
+log_filename = diagroot + 'LOG'
 
 # start pp_process_idx counter (if using 'pp_run all')
 pp_process_idx = 0

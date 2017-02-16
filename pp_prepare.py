@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """ PP_PREPARE - prepare fits images for photometry pipeline
     v1.0: 2016-02-27, michael.mommert@nau.edu
 """
@@ -22,7 +21,6 @@ from __future__ import division
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see
 # <http://www.gnu.org/licenses/>.
-
 
 from past.utils import old_div
 import numpy
@@ -57,9 +55,16 @@ logging.basicConfig(filename=_pp_conf.log_filename,
                     datefmt=_pp_conf.log_datefmt)
 
 
-def prepare(filenames, obsparam, header_update, flipx=False,
-            flipy=False, rotate=0, man_ra=None, man_dec=None,
-            diagnostics=False, display=False):
+def prepare(filenames,
+            obsparam,
+            header_update,
+            flipx=False,
+            flipy=False,
+            rotate=0,
+            man_ra=None,
+            man_dec=None,
+            diagnostics=False,
+            display=False):
     """
     prepare wrapper
     output: diagnostic properties
@@ -67,21 +72,22 @@ def prepare(filenames, obsparam, header_update, flipx=False,
 
     # start logging
     logging.info('preparing data with parameters: %s' %
-                 (', '.join([('%s: %s' % (var, str(val))) for
-                             var, val in list(locals().items())])))
+                 (', '.join([('%s: %s' % (var, str(val)))
+                             for var, val in list(locals().items())])))
 
     # change FITS file extensions to .fits
     for idx, filename in enumerate(filenames):
         if filename.split('.')[-1] in ['fts', 'FTS', 'FITS', 'fit', 'FIT']:
-            os.rename(filename, '.'.join(filename.split('.')[:-1])+'.fits')
-            filenames[idx] = '.'.join(filename.split('.')[:-1])+'.fits'
+            os.rename(filename, '.'.join(filename.split('.')[:-1]) + '.fits')
+            filenames[idx] = '.'.join(filename.split('.')[:-1]) + '.fits'
             logging.info('change filename from "%s" to "%s"' %
                          (filename, filenames[idx]))
 
     # identify keywords for GENERIC telescopes
 
     # open one sample image file
-    hdulist = fits.open(filenames[0], verify='ignore',
+    hdulist = fits.open(filenames[0],
+                        verify='ignore',
                         ignore_missing_end='True')
     header = hdulist[0].header
 
@@ -151,7 +157,9 @@ def prepare(filenames, obsparam, header_update, flipx=False,
             print('preparing', filename)
 
         # open image file
-        hdulist = fits.open(filename, mode='update', verify='silentfix',
+        hdulist = fits.open(filename,
+                            mode='update',
+                            verify='silentfix',
                             ignore_missing_end=True)
         header = hdulist[0].header
 
@@ -216,19 +224,17 @@ def prepare(filenames, obsparam, header_update, flipx=False,
             elif 'PV' in key and '_' in key:
                 if key not in obsparam.values():
                     header.remove(key)
-            elif key in ['CTYPE1', 'CRPIX1', 'CRVAL1', 'CROTA1',
-                         'CROTA2', 'CFINT1', 'CTYPE2', 'CRPIX2',
-                         'CRVAL2', 'CFINT2', 'LTM1_1', 'LTM2_2',
-                         'WAT0_001', 'LTV1', 'LTV2', 'PIXXMIT',
-                         'PIXOFFST', 'PC1_1', 'PC1_2', 'PC2_1', 'PC2_2',
-                         'CUNIT1', 'CUNIT2', 'A_ORDER', 'A_0_0',
+            elif key in ['CTYPE1', 'CRPIX1', 'CRVAL1', 'CROTA1', 'CROTA2',
+                         'CFINT1', 'CTYPE2', 'CRPIX2', 'CRVAL2', 'CFINT2',
+                         'LTM1_1', 'LTM2_2', 'WAT0_001', 'LTV1', 'LTV2',
+                         'PIXXMIT', 'PIXOFFST', 'PC1_1', 'PC1_2', 'PC2_1',
+                         'PC2_2', 'CUNIT1', 'CUNIT2', 'A_ORDER', 'A_0_0',
                          'A_0_1', 'A_0_2', 'A_1_0', 'A_1_1', 'A_2_0',
                          'B_ORDER', 'B_0_0', 'B_0_1', 'B_0_2', 'B_1_0',
-                         'B_1_1', 'B_2_0', 'AP_ORDER', 'AP_0_0',
-                         'AP_0_1', 'AP_0_2', 'AP_1_0', 'AP_1_1',
-                         'AP_2_0', 'BP_ORDER', 'BP_0_0', 'BP_0_1',
-                         'BP_0_2', 'BP_1_0', 'BP_1_1', 'BP_2_0', 'CDELT1',
-                         'CDELT2', 'CRDELT1', 'CRDELT2']:
+                         'B_1_1', 'B_2_0', 'AP_ORDER', 'AP_0_0', 'AP_0_1',
+                         'AP_0_2', 'AP_1_0', 'AP_1_1', 'AP_2_0', 'BP_ORDER',
+                         'BP_0_0', 'BP_0_1', 'BP_0_2', 'BP_1_0', 'BP_1_1',
+                         'BP_2_0', 'CDELT1', 'CDELT2', 'CRDELT1', 'CRDELT2']:
                 # used by LOWELL31, LOWELL90
                 if key not in obsparam.values():
                     header.remove(key)
@@ -242,9 +248,9 @@ def prepare(filenames, obsparam, header_update, flipx=False,
         binning = toolbox.get_binning(header, obsparam)
 
         # add pixel resolution keyword
-        header['SECPIXX'] = (obsparam['secpix'][0]*binning[0],
+        header['SECPIXX'] = (obsparam['secpix'][0] * binning[0],
                              'PP: x pixscale after binning')
-        header['SECPIXY'] = (obsparam['secpix'][1]*binning[1],
+        header['SECPIXY'] = (obsparam['secpix'][1] * binning[1],
                              'PP: y pixscale after binning')
 
         # create observation midtime jd
@@ -257,9 +263,10 @@ def prepare(filenames, obsparam, header_update, flipx=False,
             datetime = header[obsparam['date_keyword'].split('|')[0]] + 'T' + \
                        header[obsparam['date_keyword'].split('|')[1]]
             datetime = datetime.replace('/', '-')
-            header['MIDTIMJD'] = (toolbox.dateobs_to_jd(datetime) +
-                                  float(header[obsparam['exptime']])/2./86400.,
-                                  'PP: obs midtime')
+            header['MIDTIMJD'] = (
+                toolbox.dateobs_to_jd(datetime) +
+                float(header[obsparam['exptime']]) / 2. / 86400.,
+                'PP: obs midtime')
 
         # other keywords
         header['TELINSTR'] = (obsparam['telescope_instrument'],
@@ -276,8 +283,8 @@ def prepare(filenames, obsparam, header_update, flipx=False,
         # perform header update
         for key, value in list(header_update.items()):
             if key in header:
-                header['_'+key[:6]] = (header[key],
-                                       'PP: old value for %s' % key)
+                header['_' + key[:6]] = (header[key],
+                                         'PP: old value for %s' % key)
             header[key] = (value, 'PP: manually updated')
 
         # # check if RA, Dec, airmass headers are available;
@@ -320,16 +327,16 @@ def prepare(filenames, obsparam, header_update, flipx=False,
             ra_deg = float(header[obsparam['ra']])
             dec_deg = float(header[obsparam['dec']])
         else:
-            ra_string = header[obsparam['ra']].split(
-                obsparam['radec_separator'])
-            dec_string = header[obsparam['dec']].split(
-                obsparam['radec_separator'])
-            ra_deg = 15.*(float(ra_string[0]) +
-                          old_div(float(ra_string[1]), 60.) +
-                          old_div(float(ra_string[2]), 3600.))
-            dec_deg = (abs(float(dec_string[0])) +
-                       old_div(float(dec_string[1]), 60.) +
-                       old_div(float(dec_string[2]), 3600.))
+            ra_string = header[obsparam['ra']].split(obsparam[
+                'radec_separator'])
+            dec_string = header[obsparam['dec']].split(obsparam[
+                'radec_separator'])
+            ra_deg = 15. * (float(ra_string[0]) + old_div(
+                float(ra_string[1]), 60.) + old_div(
+                    float(ra_string[2]), 3600.))
+            dec_deg = (abs(float(dec_string[0])) + old_div(
+                float(dec_string[1]), 60.) + old_div(
+                    float(dec_string[2]), 3600.))
             if dec_string[0].find('-') > -1:
                 dec_deg = -1 * dec_deg
 
@@ -339,10 +346,10 @@ def prepare(filenames, obsparam, header_update, flipx=False,
 
         # special treatment for UKIRT/WFCAM
         if obsparam['telescope_keyword'] == 'UKIRTWFCAM':
-            ra_deg = (float(header['TELRA'])/24.*360. -
-                      old_div(float(header['JITTER_X']), 3600.))
-            dec_deg = (float(header['TELDEC']) -
-                       old_div(float(header['JITTER_Y']), 3600.))
+            ra_deg = (float(header['TELRA']) / 24. * 360. - old_div(
+                float(header['JITTER_X']), 3600.))
+            dec_deg = (float(header['TELDEC']) - old_div(
+                float(header['JITTER_Y']), 3600.))
 
         # apply flips
         xnorm, ynorm = 1, 1
@@ -364,27 +371,27 @@ def prepare(filenames, obsparam, header_update, flipx=False,
         header['RADESYS'] = ('FK5', 'PP: fake wcs coordinates')
         header['CTYPE1'] = ('RA---TAN', 'PP: fake Coordinate type')
         header['CTYPE2'] = ('DEC--TAN', 'PP: fake Coordinate type')
-        header['CRVAL1'] = (ra_deg+ra_offset,
+        header['CRVAL1'] = (ra_deg + ra_offset,
                             'PP: fake Coordinate reference value')
-        header['CRVAL2'] = (dec_deg+dec_offset,
+        header['CRVAL2'] = (dec_deg + dec_offset,
                             'PP: fake Coordinate reference value')
         header['CRPIX1'] = (int(old_div(
-                                float(header[obsparam['extent'][0]]), 2)),
+            float(header[obsparam['extent'][0]]), 2)),
                             'PP: fake Coordinate reference pixel')
         header['CRPIX2'] = (int(old_div(
-                                float(header[obsparam['extent'][1]]), 2)),
+            float(header[obsparam['extent'][1]]), 2)),
                             'PP: fake Coordinate reference pixel')
-        header['CD1_1'] = (xnorm * numpy.cos(this_rotate/180.*numpy.pi) *
-                           obsparam['secpix'][0]*binning[0]/3600.,
+        header['CD1_1'] = (xnorm * numpy.cos(this_rotate / 180. * numpy.pi) *
+                           obsparam['secpix'][0] * binning[0] / 3600.,
                            'PP: fake Coordinate matrix')
-        header['CD1_2'] = (ynorm * -numpy.sin(this_rotate/180.*numpy.pi) *
-                           obsparam['secpix'][1]*binning[1]/3600.,
+        header['CD1_2'] = (ynorm * -numpy.sin(this_rotate / 180. * numpy.pi) *
+                           obsparam['secpix'][1] * binning[1] / 3600.,
                            'PP: fake Coordinate matrix')
-        header['CD2_1'] = (xnorm * numpy.sin(this_rotate/180.*numpy.pi) *
-                           obsparam['secpix'][0]*binning[0]/3600.,
+        header['CD2_1'] = (xnorm * numpy.sin(this_rotate / 180. * numpy.pi) *
+                           obsparam['secpix'][0] * binning[0] / 3600.,
                            'PP: fake Coordinate matrix')
-        header['CD2_2'] = (ynorm * numpy.cos(this_rotate/180.*numpy.pi) *
-                           obsparam['secpix'][1]*binning[1]/3600.,
+        header['CD2_2'] = (ynorm * numpy.cos(this_rotate / 180. * numpy.pi) *
+                           obsparam['secpix'][1] * binning[1] / 3600.,
                            'PP: fake Coordinate matrix')
 
         # crop center from LOWELL42 frames
@@ -412,22 +419,25 @@ def prepare(filenames, obsparam, header_update, flipx=False,
 if __name__ == '__main__':
 
     # command line arguments
-    parser = argparse.ArgumentParser(description=('prepare data for ' +
-                                                  'photometry pipeline'))
+    parser = argparse.ArgumentParser(description=(
+        'prepare data for ' + 'photometry pipeline'))
     parser.add_argument('images', help='images to process', nargs='+')
-    parser.add_argument("-ra",
-                        help='image center position (RA J2000.0, deg)')
+    parser.add_argument("-ra", help='image center position (RA J2000.0, deg)')
     parser.add_argument("-dec",
                         help='image center position (Dec J2000.0, deg)')
-    parser.add_argument('-flipx', help='flip fake wcs x-axis',
+    parser.add_argument('-flipx',
+                        help='flip fake wcs x-axis',
                         action="store_true")
-    parser.add_argument('-flipy', help='flip fake wcs y-axis',
+    parser.add_argument('-flipy',
+                        help='flip fake wcs y-axis',
                         action="store_true")
-    parser.add_argument('-rotate', help='rotate fake wcs by angle (deg)',
+    parser.add_argument('-rotate',
+                        help='rotate fake wcs by angle (deg)',
                         default=0)
     parser.add_argument("-target",
                         help='target name (will overwrite OBJECT keyword)')
-    parser.add_argument("-telescope", help='manual telescope override',
+    parser.add_argument("-telescope",
+                        help='manual telescope override',
                         default=None)
 
     args = parser.parse_args()
@@ -448,7 +458,8 @@ if __name__ == '__main__':
     instruments = []
     for filename in filenames:
         try:
-            hdulist = fits.open(filename, verify='ignore',
+            hdulist = fits.open(filename,
+                                verify='ignore',
                                 ignore_missing_end=True)
         except IOError:
             raise IOError('File %s does not exist! Abort.' % filename)
@@ -476,7 +487,13 @@ if __name__ == '__main__':
         header_update[obsparam['object']] = man_target
 
     # run prepare wrapper
-    preparation = prepare(filenames, obsparam, header_update,
-                          flipx=man_flipx, flipy=man_flipy,
-                          man_ra=man_ra, man_dec=man_dec, rotate=man_rotate,
-                          diagnostics=True, display=True)
+    preparation = prepare(filenames,
+                          obsparam,
+                          header_update,
+                          flipx=man_flipx,
+                          flipy=man_flipy,
+                          man_ra=man_ra,
+                          man_dec=man_dec,
+                          rotate=man_rotate,
+                          diagnostics=True,
+                          display=True)

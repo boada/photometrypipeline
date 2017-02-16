@@ -22,7 +22,6 @@ from __future__ import division
 # along with this program.  If not, see
 # <http://www.gnu.org/licenses/>.
 
-
 from past.utils import old_div
 import math
 import sys
@@ -30,41 +29,42 @@ import numpy
 #import urllib.request, urllib.error, urllib.parse
 
 # only import if Python3 is used
-if sys.version_info > (3,0):
-  from future import standard_library
-  standard_library.install_aliases()
-  from builtins import range
-
+if sys.version_info > (3, 0):
+    from future import standard_library
+    standard_library.install_aliases()
+    from builtins import range
 
 ##### TIME AND DATE
 
+
 def jd_to_gregorian(jd, is_mjd=False):
-  """ convert a julian date into a gregorian data """
-  if is_mjd:
-      mjd = jd
-  else:
-      mjd = jd -2400000.5
+    """ convert a julian date into a gregorian data """
+    if is_mjd:
+        mjd = jd
+    else:
+        mjd = jd - 2400000.5
 
-  MJD0 = 2400000.5 # 1858 November 17, 00:00:00 hours
+    MJD0 = 2400000.5  # 1858 November 17, 00:00:00 hours
 
-  modf = math.modf
-  a = int(mjd+MJD0+0.5)
-  b = int(old_div((a-1867216.25),36524.25))
-  c = a+ b - int(modf(old_div(b,4))[1]) + 1525
+    modf = math.modf
+    a = int(mjd + MJD0 + 0.5)
+    b = int(old_div((a - 1867216.25), 36524.25))
+    c = a + b - int(modf(old_div(b, 4))[1]) + 1525
 
-  d = int(old_div((c-122.1),365.25))
-  e = 365*d + int(modf(old_div(d,4))[1])
-  f = int(old_div((c-e),30.6001))
+    d = int(old_div((c - 122.1), 365.25))
+    e = 365 * d + int(modf(old_div(d, 4))[1])
+    f = int(old_div((c - e), 30.6001))
 
-  day = int(c - e - int(30.6001*f))
-  month = int(f - 1 - 12*int(modf(old_div(f,14))[1]))
-  year = int(d - 4715 - int(modf(old_div((7+month),10))[1]))
-  fracofday = mjd - math.floor(mjd)
-  hour = int(math.floor(fracofday * 24.0 ))
-  minute = int(math.floor(((fracofday*24.0)-hour)*60.))
-  second = int(math.floor(((((fracofday*24.0)-hour)*60.)-minute)*60.))
+    day = int(c - e - int(30.6001 * f))
+    month = int(f - 1 - 12 * int(modf(old_div(f, 14))[1]))
+    year = int(d - 4715 - int(modf(old_div((7 + month), 10))[1]))
+    fracofday = mjd - math.floor(mjd)
+    hour = int(math.floor(fracofday * 24.0))
+    minute = int(math.floor(((fracofday * 24.0) - hour) * 60.))
+    second = int(math.floor(((((fracofday * 24.0) - hour) * 60.) - minute) *
+                            60.))
 
-  return (year,month,day,hour,minute,second)
+    return (year, month, day, hour, minute, second)
 
 
 def dateobs_to_jd(date):
@@ -72,35 +72,36 @@ def dateobs_to_jd(date):
         date; 'T' is used as a separator between date and time
     """
     if 'T' in date:
-      date = date.split('T')
+        date = date.split('T')
     if ' ' in date:
-      date = date.split(' ')
+        date = date.split(' ')
     time = date[1].split(':')
     date = date[0].split('-')
-    a = (14 - float(date[1]))//12
+    a = (14 - float(date[1])) // 12
     y = float(date[0]) + 4800 - a
-    m = float(date[1]) + 12*a - 3
+    m = float(date[1]) + 12 * a - 3
     return float(date[2]) + ((153*m + 2)//5) + 365*y + y//4 - y//100 \
       + y//400 - 32045.5 + old_div(float(time[0]),24.) + old_div(float(time[1]),1440.) \
       + old_div(float(time[2]),86400.)
 
 
 def jd_to_fractionalyear(jd, is_mjd=False):
-  """ convert a julian date into a fractional year, e.g., 2000.123456 """
-  if is_mjd:
-      jd += 2400000.5
-  date = jd_to_gregorian(jd)
-  year = date[0]+old_div(date[1],12.)+old_div(date[2],365.)+old_div(date[3],8760.)+old_div(date[4],525600.)
-  return year
+    """ convert a julian date into a fractional year, e.g., 2000.123456 """
+    if is_mjd:
+        jd += 2400000.5
+    date = jd_to_gregorian(jd)
+    year = date[0] + old_div(date[1], 12.) + old_div(date[2], 365.) + old_div(
+        date[3], 8760.) + old_div(date[4], 525600.)
+    return year
 
 
 def fractionalyear_to_jd(date):
-  """ convert a fractional year into a julian date """
-  jd_jan1 = dateobs_to_jd('%4d-01-01T00:00:00' % math.floor(date))
-  return jd_jan1 + 365*(date-math.floor(date))
-
+    """ convert a fractional year into a julian date """
+    jd_jan1 = dateobs_to_jd('%4d-01-01T00:00:00' % math.floor(date))
+    return jd_jan1 + 365 * (date - math.floor(date))
 
 ### ASTROMATIC tools
+
 
 def read_scamp_output():
     """ routine to read in the 'scamp.xml' file """
@@ -139,18 +140,18 @@ def read_scamp_output():
     # check if data rows have same length as header
     abort = False
     for i in range(len(data)):
-      if len(headers) != len(data[i]):
-        print('ERROR: data and header lists from SCAMP output file have ' \
-          + 'different lengths for image %s; do the FITS files have the ' \
-          + 'OBJECT keyword populated?' % data[i][headers['Catalog_Name']])
-        abort = True
+        if len(headers) != len(data[i]):
+            print('ERROR: data and header lists from SCAMP output file have ' \
+              + 'different lengths for image %s; do the FITS files have the ' \
+              + 'OBJECT keyword populated?' % data[i][headers['Catalog_Name']])
+            abort = True
     if abort:
-      return ()
+        return ()
     else:
-      return (headers, data)
-
+        return (headers, data)
 
 ##### PP tools
+
 
 def get_binning(header, obsparam):
     """ derive binning from image header
@@ -174,10 +175,10 @@ def get_binning(header, obsparam):
         elif '_CH_' in obsparam['binning'][0]:
             # only for RATIR
             channel = header['INSTRUME'].strip()[1]
-            binning_x = float(header[obsparam['binning'][0].
-                                     replace('_CH_', channel)])
-            binning_y = float(header[obsparam['binning'][1].
-                                     replace('_CH_', channel)])
+            binning_x = float(header[obsparam['binning'][0].replace('_CH_',
+                                                                    channel)])
+            binning_y = float(header[obsparam['binning'][1].replace('_CH_',
+                                                                    channel)])
     else:
         binning_x = header[obsparam['binning'][0]]
         binning_y = header[obsparam['binning'][1]]

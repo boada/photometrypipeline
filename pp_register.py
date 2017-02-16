@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """ PP_REGISTER - wcs register frames
     v1.0: 2015-12-30, michael.mommert@nau.edu
 """
@@ -22,7 +21,6 @@ from __future__ import print_function
 # along with this program.  If not, see
 # <http://www.gnu.org/licenses/>.
 
-
 import numpy
 import os
 import sys
@@ -40,20 +38,25 @@ import pp_extract
 import diagnostics as diag
 
 # only import if Python3 is used
-if sys.version_info > (3,0):
+if sys.version_info > (3, 0):
     from builtins import str
 
-
 # setup logging
-logging.basicConfig(filename = _pp_conf.log_filename,
-                    level    = _pp_conf.log_level,
-                    format   = _pp_conf.log_formatline,
-                    datefmt  = _pp_conf.log_datefmt)
+logging.basicConfig(filename=_pp_conf.log_filename,
+                    level=_pp_conf.log_level,
+                    format=_pp_conf.log_formatline,
+                    datefmt=_pp_conf.log_datefmt)
 
 
-
-def register(filenames, telescope, sex_snr, source_minarea, aprad,
-             mancat, obsparam, source_tolerance, display=False,
+def register(filenames,
+             telescope,
+             sex_snr,
+             source_minarea,
+             aprad,
+             mancat,
+             obsparam,
+             source_tolerance,
+             display=False,
              diagnostics=False):
     """
     registration wrapper
@@ -67,7 +70,8 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
 
     # check if images have been run through pp_prepare
     try:
-        midtime_jd = fits.open(filenames[0], verify='silentfix',
+        midtime_jd = fits.open(filenames[0],
+                               verify='silentfix',
                                ignore_missing_end=True)[0].header['MIDTIMJD']
     except KeyError:
         raise KeyError(('%s image header incomplete, have the data run ' +
@@ -79,10 +83,11 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
         obsparam['astrometry_catalogs'] = [mancat]
 
     # use each catalog twice
-    obsparam['astrometry_catalogs'] = [catcat for cat in
-                                       obsparam['astrometry_catalogs']
-                                       for catcat in [cat]*
-                                       _pp_conf.n_registration_repetitions ]
+    obsparam['astrometry_catalogs'] = [
+        catcat
+        for cat in obsparam['astrometry_catalogs']
+        for catcat in [cat] * _pp_conf.n_registration_repetitions
+    ]
 
     n_success_last_iteration = None
 
@@ -120,7 +125,6 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
                 logging.error('no sources detected in image files')
             return {'goodfits': [], 'badfits': filenames}
 
-
         output = {}
         fileline = " ".join(ldac_files)
 
@@ -128,17 +132,20 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
         logging.info('check if sufficient reference stars in catalog %s' %
                      refcat)
 
-        hdulist = fits.open(filenames[len(filenames)//2],
+        hdulist = fits.open(filenames[len(filenames) // 2],
                             ignore_missing_end=True)
 
         ra = float(hdulist[0].header['CRVAL1'])
         dec = float(hdulist[0].header['CRVAL2'])
-        rad = max([float(hdulist[0].header[obsparam['extent'][0]])*
-                   float(hdulist[0].header['SECPIXX'])/3600.,
-                   float(hdulist[0].header[obsparam['extent'][1]])*
-                   float(hdulist[0].header['SECPIXY'])/3600.])
+        rad = max([float(hdulist[0].header[obsparam['extent'][0]]) *
+                   float(hdulist[0].header['SECPIXX']) / 3600.,
+                   float(hdulist[0].header[obsparam['extent'][1]]) *
+                   float(hdulist[0].header['SECPIXY']) / 3600.])
         checkrefcat = catalog(refcat, display=False)
-        n_sources = checkrefcat.download_catalog(ra, dec, rad, 100,
+        n_sources = checkrefcat.download_catalog(ra,
+                                                 dec,
+                                                 rad,
+                                                 100,
                                                  save_catalog=False)
         if n_sources < _pp_conf.min_sources_astrometric_catalog:
             logging.info(('Only %d sources in astrometric reference catalog; ' \
@@ -158,11 +165,13 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
 
         # download catalog and write to ldac file for SCAMP
         astcat = catalog(refcat, display=True)
-        n_sources = astcat.download_catalog(ra, dec,
-                                            rad+obsparam['reg_search_radius'],
-                                            100000,
-                                            max_mag=obsparam['reg_max_mag'],
-                                            save_catalog=True)
+        n_sources = astcat.download_catalog(
+            ra,
+            dec,
+            rad + obsparam['reg_search_radius'],
+            100000,
+            max_mag=obsparam['reg_max_mag'],
+            save_catalog=True)
 
         # translate source_tolerance into SCAMP properties
         #   code      SCAMP_code   keep
@@ -170,10 +179,10 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
         #   'low'     0x00fe       sources with bright neighbors
         #   'medium'  0x00fd       blended sources
         #   'high'    0x00fc       saturated sources
-        st_code = {'none':   '0x00ff',
-                   'low':    '0x00fe',
+        st_code = {'none': '0x00ff',
+                   'low': '0x00fe',
                    'medium': '0x00fd',
-                   'high':   '0x00fc'}[source_tolerance]
+                   'high': '0x00fc'}[source_tolerance]
 
         # assemble arguments for scamp, run it, and wait for it
         commandline = 'scamp -c '+obsparam['scamp-config-file']+ \
@@ -189,14 +198,13 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
         scamp = _pp_conf.read_scamp_output()
         os.rename('scamp_output.xml', 'astrometry_scamp.xml')
         goodfits, badfits = [], []
-        fitresults = [] # store scamp outputs
+        fitresults = []  # store scamp outputs
         for dat in scamp[1]:
             # successful fit
             if ((float(dat[scamp[0]['AS_Contrast']]) <
-                 _pp_conf.scamp_as_contrast_limit)
-                or (float(dat[scamp[0]['XY_Contrast']]) <
-                    _pp_conf.scamp_xy_contrast_limit)
-                or len(dat) == 0):
+                 _pp_conf.scamp_as_contrast_limit) or
+                (float(dat[scamp[0]['XY_Contrast']]) <
+                 _pp_conf.scamp_xy_contrast_limit) or len(dat) == 0):
                 filename = dat[scamp[0]['Catalog_Name']]
                 for file in os.listdir('.'):
                     if file.find(filename[:filename.find('.ldac')]+'.fit') \
@@ -222,17 +230,16 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
                  float(dat[scamp[0]['Chi2_Internal']])])
 
         open('registration_succeeded.lst', 'w').writelines("%s\n" %
-                '\n'.join(goodfits))
-        if len(goodfits)==0 and len(badfits)==0:
+                                                           '\n'.join(goodfits))
+        if len(goodfits) == 0 and len(badfits) == 0:
             badfits = filenames
         open('registration_failed.lst', 'w').writelines("%s\n" %
-                '\n'.join(badfits))
+                                                        '\n'.join(badfits))
 
-        output['goodfits']    = goodfits
-        output['badfits']     = badfits
-        output['fitresults']  = fitresults
-        output['catalog']     = refcat
-
+        output['goodfits'] = goodfits
+        output['badfits'] = badfits
+        output['fitresults'] = fitresults
+        output['catalog'] = refcat
 
         ##### check registration outcome
 
@@ -274,16 +281,19 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
 
     for filename in goodfits:
         # remove fake wcs header keys
-        fake_wcs_keys =  ['RADECSYS', 'CTYPE1', 'CTYPE2', 'CRVAL1', 'CRVAL2',
-                          'CRPIX1', 'CRPIX2', 'CD1_1', 'CD1_2', 'CD2_1',
-                          'CD2_2', 'RADESYS']
-        hdu = fits.open(filename, mode='update', verify='silentfix',
+        fake_wcs_keys = ['RADECSYS', 'CTYPE1', 'CTYPE2', 'CRVAL1', 'CRVAL2',
+                         'CRPIX1', 'CRPIX2', 'CD1_1', 'CD1_2', 'CD2_1',
+                         'CD2_2', 'RADESYS']
+        hdu = fits.open(filename,
+                        mode='update',
+                        verify='silentfix',
                         ignore_missing_end=True)
         for fake_key in fake_wcs_keys:
             hdu[0].header[fake_key] = ''
 
         # read new header files
-        newhead = open(filename[:filename.find('.fit')]+'.head','r').readlines()
+        newhead = open(filename[:filename.find('.fit')] + '.head',
+                       'r').readlines()
 
         for line in newhead:
             key = line[:8].strip()
@@ -307,8 +317,7 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
 
         # cleaning up (in case the registration succeeded)
         if len(goodfits) == len(filenames):
-            os.remove(filename[:filename.find('.fit')]+'.head')
-
+            os.remove(filename[:filename.find('.fit')] + '.head')
 
     if len(badfits) == len(filenames):
         if display:
@@ -325,7 +334,6 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
                         (data[0], data[1], data[2], data[5], data[6],
                          numpy.sqrt(data[3]**2+data[4]**2)))
     outf.close()
-
 
     ### extraction output
     #
@@ -344,13 +352,11 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
 
     ##### create diagnostics
     if diagnostics:
-       diag.add_registration(output, extraction)
+        diag.add_registration(output, extraction)
 
     logging.info('Done! -----------------------------------------------------')
 
     return output
-
-
 
 
 if __name__ == '__main__':
@@ -358,14 +364,15 @@ if __name__ == '__main__':
     # command line arguments
     parser = argparse.ArgumentParser(description='automated WCS registration')
     parser.add_argument("-snr", help='sextractor SNR threshold', default=3)
-    parser.add_argument("-minarea", help='sextractor SNR threshold',
-                        default=0)
+    parser.add_argument("-minarea", help='sextractor SNR threshold', default=0)
     parser.add_argument('-source_tolerance',
                         help='tolerance on source properties for registration',
                         choices=['none', 'low', 'medium', 'high'],
                         default='high')
-    parser.add_argument("-cat", help='manually select reference catalog',
-                        choices=_pp_conf.allcatalogs, default=None)
+    parser.add_argument("-cat",
+                        help='manually select reference catalog',
+                        choices=_pp_conf.allcatalogs,
+                        default=None)
     parser.add_argument('images', help='images to process', nargs='+')
 
     args = parser.parse_args()
@@ -375,12 +382,12 @@ if __name__ == '__main__':
     source_tolerance = args.source_tolerance
     filenames = args.images
 
-
     ### read telescope and filter information from fits headers
     # check that they are the same for all images
     instruments = []
     for filename in filenames:
-        hdulist = fits.open(filename, ignore_missing_end=True,
+        hdulist = fits.open(filename,
+                            ignore_missing_end=True,
                             verify='silentfix')
         header = hdulist[0].header
         for key in _pp_conf.instrument_keys:
@@ -390,7 +397,6 @@ if __name__ == '__main__':
     if len(instruments) == 0:
         raise KeyError('cannot identify telescope/instrument; please update' + \
                        '_pp_conf.instrument_keys accordingly')
-
 
     # assign telescope parameters (telescopes.py)
     telescope = _pp_conf.instrument_identifiers[instruments[0]]
@@ -404,9 +410,13 @@ if __name__ == '__main__':
         source_minarea = obsparam['source_minarea']
 
     # run registration wrapper
-    registration = register(filenames, telescope, sex_snr,
-                            source_minarea, aprad, mancat, obsparam,
+    registration = register(filenames,
+                            telescope,
+                            sex_snr,
+                            source_minarea,
+                            aprad,
+                            mancat,
+                            obsparam,
                             source_tolerance,
-                            display=True, diagnostics=True)
-
-
+                            display=True,
+                            diagnostics=True)

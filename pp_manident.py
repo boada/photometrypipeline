@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """ MANIDENT - manual target identification tool for the Photometry Pipeline
 
     v1.0: 2016-08-08, michael.mommert@nau.edu
@@ -24,12 +23,11 @@ from scipy.ndimage import interpolation as interp
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 # only import if Python3 is used
-if sys.version_info > (3,0):
+if sys.version_info > (3, 0):
     from future import standard_library
     standard_library.install_aliases()
     from builtins import range
     from builtins import object
-
 
 # pipeline-specific modules
 from catalog import *
@@ -37,7 +35,6 @@ from catalog import *
 
 ### class structure for Tkinter control
 class Clicker(object):
-
     def __init__(self, master, zoom, filelist):
         self.top = master
         self.files = filelist
@@ -46,8 +43,8 @@ class Clicker(object):
         self.interp_index = [None for i in range(len(self.files))]
         self.index = 0
         self.images = []
-        self.ldac   = []
-        self.mjd    = []
+        self.ldac = []
+        self.mjd = []
 
         ### load image data
         print('please wait, loading images...', end=' ')
@@ -58,17 +55,18 @@ class Clicker(object):
         print('done!')
 
         # create title bar
-        self.title = Label(text='%s (%d/%d)' %
-                           (self.images[0],
-                            self.index+1, len(self.files)))
+        self.title = Label(text='%s (%d/%d)' % (self.images[0], self.index + 1,
+                                                len(self.files)))
         self.title.pack()
-
 
         # select first image
         self.tkimage = ImageTk.PhotoImage(self.images[0], palette=256)
-        self.canvas = Canvas(master, height=self.tkimage.height(), width=
-                             self.tkimage.width())
-        self.image = self.canvas.create_image(0, 0, anchor='nw',
+        self.canvas = Canvas(master,
+                             height=self.tkimage.height(),
+                             width=self.tkimage.width())
+        self.image = self.canvas.create_image(0,
+                                              0,
+                                              anchor='nw',
                                               image=self.tkimage)
 
         # create position indicators:
@@ -76,11 +74,17 @@ class Clicker(object):
         # selected
         self.green_circles = []
 
-        self.redcircle_id = self.canvas.create_oval(-100, -100, -100,
-                                                    -100, outline='red',
+        self.redcircle_id = self.canvas.create_oval(-100,
+                                                    -100,
+                                                    -100,
+                                                    -100,
+                                                    outline='red',
                                                     width=2)
-        self.yellowcircle_id = self.canvas.create_oval(-100, -100, -100,
-                                                    -100, outline='orange',
+        self.yellowcircle_id = self.canvas.create_oval(-100,
+                                                       -100,
+                                                       -100,
+                                                       -100,
+                                                       outline='orange',
                                                        width=1)
 
         # frame counter variable
@@ -98,19 +102,17 @@ class Clicker(object):
         self.canvas.bind("<Button 1>", self.left_click)
         self.canvas.bind("<Button 3>", self.right_click)
 
-
     def left_click(self, event):
         """ select source """
-        x, y = old_div(event.x,self.zoom), old_div(event.y,self.zoom)
+        x, y = old_div(event.x, self.zoom), old_div(event.y, self.zoom)
 
         # find source closest to click position in ldac, identify
         # source index
-        residuals = numpy.sqrt((self.ldac[self.index]['XWIN_IMAGE']-x)**2 +
-                               (self.ldac[self.index]['YWIN_IMAGE']-y)**2)
+        residuals = numpy.sqrt((self.ldac[self.index]['XWIN_IMAGE'] - x)**2 + (
+            self.ldac[self.index]['YWIN_IMAGE'] - y)**2)
         closest_idx = numpy.argmin(residuals)
         self.target_index[self.index] = closest_idx
         self.nextframe(0)
-
 
     def right_click(self, event):
         """ next frame """
@@ -142,9 +144,9 @@ class Clicker(object):
         """ read in all image data, scale images """
         for idx, filename in enumerate(filenames):
             if idx > 0:
-                print('\b\b\b\b%3d' % (idx+1), end=' ')
+                print('\b\b\b\b%3d' % (idx + 1), end=' ')
             else:
-                print('%3d' % (idx+1), end=' ')
+                print('%3d' % (idx + 1), end=' ')
             sys.stdout.flush()
 
             ## read image data
@@ -152,19 +154,18 @@ class Clicker(object):
             imgdat = hdulist[0].data
 
             median = numpy.median(imgdat)
-            std    = numpy.std(imgdat)
+            std = numpy.std(imgdat)
 
-            median = numpy.median(imgdat[int(imgdat.shape[1]*0.25):
-                                         int(imgdat.shape[1]*0.75),
-                                         int(imgdat.shape[0]*0.25):
-                                         int(imgdat.shape[0]*0.75)])
-            std    = numpy.std(imgdat[int(imgdat.shape[1]*0.25):
-                                      int(imgdat.shape[1]*0.75),
-                                      int(imgdat.shape[0]*0.25):
-                                      int(imgdat.shape[0]*0.75)])
+            median = numpy.median(imgdat[int(imgdat.shape[1] * 0.25):int(
+                imgdat.shape[1] * 0.75), int(imgdat.shape[0] * 0.25):int(
+                    imgdat.shape[0] * 0.75)])
+            std = numpy.std(imgdat[int(imgdat.shape[1] * 0.25):int(
+                imgdat.shape[1] * 0.75), int(imgdat.shape[0] * 0.25):int(
+                    imgdat.shape[0] * 0.75)])
 
-            imgdat = old_div(numpy.clip(imgdat, median-0.5*std,
-                                median+0.5*std),(old_div(std,256)))
+            imgdat = old_div(
+                numpy.clip(imgdat, median - 0.5 * std, median + 0.5 * std),
+                (old_div(std, 256)))
             imgdat = imgdat - numpy.min(imgdat)
             imgdat = interp.zoom(imgdat, self.zoom)
 
@@ -173,7 +174,7 @@ class Clicker(object):
             ## read ldac data
             cat = catalog(filename)
 
-            ldac_filename = filename[:filename.find('.fit')]+'.ldac'
+            ldac_filename = filename[:filename.find('.fit')] + '.ldac'
             cat.read_ldac(ldac_filename, filename, maxflag=4)
 
             self.ldac.append(cat)
@@ -181,9 +182,7 @@ class Clicker(object):
             ## read header data (MJD)
             self.mjd.append(float(hdulist[0].header['MIDTIMJD']))
 
-
-
-    def nextframe(self,i=1, imgnum=-1):
+    def nextframe(self, i=1, imgnum=-1):
         """ display frame using iterator i"""
 
         if imgnum == -1:
@@ -198,11 +197,10 @@ class Clicker(object):
         if not os.path.exists(filename):
             print("Unable to find %s" % filename)
             self.top.quit()
-        self.evar.set(self.index+1)
+        self.evar.set(self.index + 1)
 
-        self.title.configure(text='%s (%d/%d)' %
-                           (os.path.basename(filename),
-                            self.index+1, len(self.files)))
+        self.title.configure(text='%s (%d/%d)' % (
+            os.path.basename(filename), self.index + 1, len(self.files)))
 
         im = self.images[self.index]
 
@@ -211,11 +209,12 @@ class Clicker(object):
         interp_idx = None
         if self.target_index[self.index] is not None:
             idx = self.target_index[self.index]
-            self.canvas.coords(self.redcircle_id,
-                    (self.ldac[self.index][idx]['XWIN_IMAGE']*self.zoom-4,
-                     self.ldac[self.index][idx]['YWIN_IMAGE']*self.zoom-4,
-                     self.ldac[self.index][idx]['XWIN_IMAGE']*self.zoom+4,
-                     self.ldac[self.index][idx]['YWIN_IMAGE']*self.zoom+4))
+            self.canvas.coords(
+                self.redcircle_id,
+                (self.ldac[self.index][idx]['XWIN_IMAGE'] * self.zoom - 4,
+                 self.ldac[self.index][idx]['YWIN_IMAGE'] * self.zoom - 4,
+                 self.ldac[self.index][idx]['XWIN_IMAGE'] * self.zoom + 4,
+                 self.ldac[self.index][idx]['YWIN_IMAGE'] * self.zoom + 4))
             self.canvas.coords(self.yellowcircle_id, (-100, -100, -100, -100))
         else:
             # if no coordinates available, move red circle out of canvas
@@ -224,11 +223,13 @@ class Clicker(object):
             # use yellow circle if sufficient target positions known
             interp_idx = self.extrapolate(self.mjd[self.index])
             if interp_idx is not None:
-                self.canvas.coords(self.yellowcircle_id,
-                (self.ldac[self.index][interp_idx]['XWIN_IMAGE']*self.zoom-4,
-                 self.ldac[self.index][interp_idx]['YWIN_IMAGE']*self.zoom-4,
-                 self.ldac[self.index][interp_idx]['XWIN_IMAGE']*self.zoom+4,
-                 self.ldac[self.index][interp_idx]['YWIN_IMAGE']*self.zoom+4))
+                self.canvas.coords(self.yellowcircle_id, (
+                    self.ldac[self.index][interp_idx]['XWIN_IMAGE'] * self.zoom
+                    - 4, self.ldac[self.index][interp_idx]['YWIN_IMAGE'] *
+                    self.zoom - 4,
+                    self.ldac[self.index][interp_idx]['XWIN_IMAGE'] * self.zoom
+                    + 4, self.ldac[self.index][interp_idx]['YWIN_IMAGE'] *
+                    self.zoom + 4))
             else:
                 self.canvas.coords(self.yellowcircle_id,
                                    (-100, -100, -100, -100))
@@ -256,8 +257,6 @@ class Clicker(object):
 
         self.tkimage.paste(im)
 
-
-
     def extrapolate(self, time):
         """fit path with spline, identify nearest source"""
 
@@ -268,20 +267,21 @@ class Clicker(object):
                 x.append(self.ldac[i][self.target_index[i]]['XWIN_IMAGE'])
                 y.append(self.ldac[i][self.target_index[i]]['YWIN_IMAGE'])
 
-        k = min([len(t), 3])-1
+        k = min([len(t), 3]) - 1
 
         if k >= 1:
             # extrapolate position
-            fx = InterpolatedUnivariateSpline(numpy.array(t), numpy.array(x),
-                                              k=k)
-            fy = InterpolatedUnivariateSpline(numpy.array(t), numpy.array(y),
-                                              k=k)
+            fx = InterpolatedUnivariateSpline(
+                numpy.array(t), numpy.array(x),
+                k=k)
+            fy = InterpolatedUnivariateSpline(
+                numpy.array(t), numpy.array(y),
+                k=k)
 
             # identify closest source
-            residuals = numpy.sqrt((self.ldac[self.index]['XWIN_IMAGE']-
-                                    fx(time))**2 +
-                                   (self.ldac[self.index]['YWIN_IMAGE']-
-                                    fy(time))**2)
+            residuals = numpy.sqrt((self.ldac[self.index]['XWIN_IMAGE'] - fx(
+                time))**2 + (self.ldac[self.index]['YWIN_IMAGE'] - fy(time))**
+                                   2)
             return numpy.argmin(residuals)
         else:
             return None
@@ -290,11 +290,11 @@ class Clicker(object):
 
 if __name__ == "__main__":
 
-############# here
-
+    ############# here
 
     # define command line arguments
-    parser = argparse.ArgumentParser(description='manual target identification')
+    parser = argparse.ArgumentParser(
+        description='manual target identification')
     parser.add_argument('-zoom', help='image zoom factor', default=0.5)
     parser.add_argument('images', help='images to process', nargs='+')
     args = parser.parse_args()
@@ -306,14 +306,17 @@ if __name__ == "__main__":
     root.mainloop()
 
     outf = open('positions.dat', 'w')
-    outf.write('#                                         filename        midtime_JD          RA        Dec\n' +
-               '# note that RA and Dec might be based on a fake plate solution and hence are not astrometric\n')
+    outf.write(
+        '#                                         filename        midtime_JD          RA        Dec\n'
+        +
+        '# note that RA and Dec might be based on a fake plate solution and hence are not astrometric\n')
 
     # recalculate target coordinates and write them into a file
     for image_idx, image_name in enumerate(app.files):
         # accurate position
         if app.target_index[image_idx] is not None:
-            outf.write('%50.50s   %9.5f  %9.5f   %15.7f\n' % (image_name,
+            outf.write('%50.50s   %9.5f  %9.5f   %15.7f\n' % (
+                image_name,
                 app.ldac[image_idx][app.target_index[image_idx]]['XWIN_WORLD'],
                 app.ldac[image_idx][app.target_index[image_idx]]['YWIN_WORLD'],
                 app.mjd[image_idx]))
@@ -322,13 +325,11 @@ if __name__ == "__main__":
             app.index = image_idx
             interp_idx = app.extrapolate(app.mjd[image_idx])
 
-            outf.write('%50.50s   %9.5f  %9.5f  %15.7f\n' % (image_name,
-                app.ldac[image_idx][interp_idx]['XWIN_WORLD'],
+            outf.write('%50.50s   %9.5f  %9.5f  %15.7f\n' % (
+                image_name, app.ldac[image_idx][interp_idx]['XWIN_WORLD'],
                 app.ldac[image_idx][interp_idx]['YWIN_WORLD'],
                 app.mjd[image_idx]))
 
-    print(image_idx+1, 'target positions written to file positions.dat')
+    print(image_idx + 1, 'target positions written to file positions.dat')
 
     outf.close()
-
-
