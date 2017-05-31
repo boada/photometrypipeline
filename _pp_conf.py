@@ -117,12 +117,14 @@ else:
 # available catalogs
 
 # list of available catalogs
-allcatalogs = ['URAT-1', '2MASS', 'SDSS-R9', 'APASS9', 'GAIA', 'PANSTARRS']
+allcatalogs = ['URAT-1', '2MASS', 'SDSS-R9', 'SDSS-R13', 'APASS9', 'GAIA',
+               'PANSTARRS']
 
 # catalog magnitude systems
 allcatalogs_magsys = {'URAT-1': 'Vega',
                       '2MASS': 'Vega',
                       'SDSS-R9': 'AB',
+                      'SDSS-R13': 'AB',
                       'APASS9': 'Vega',
                       'GAIA': 'Vega',
                       'PANSTARRS': 'AB'}
