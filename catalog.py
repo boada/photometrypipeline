@@ -538,11 +538,17 @@ class catalog(object):
                 return 0
 
             # apply some quality masks
-            mask_primary = self.data['mode'] == 1
-            mask_clean = self.data['clean'] == 1
-            mask_star = self.data['type'] == 6
-            mask_bright = self.data['fiberMag_g'] < max_mag
-            mask = mask_primary & mask_clean & mask_star & mask_bright
+            try:
+                mask_primary = self.data['mode'] == 1
+                mask_clean = self.data['clean'] == 1
+                mask_star = self.data['type'] == 6
+                mask_bright = self.data['fiberMag_g'] < max_mag
+                mask = mask_primary & mask_clean & mask_star & mask_bright
+            except TypeError:
+                if self.display:
+                    print('no data available from %s' % self.catalogname)
+                logging.error('no data available from %s' % self.catalogname)
+                return 0
 
             self.data = self.data[mask]
 
