@@ -319,8 +319,14 @@ the logical order:
                          (deg), dec (deg); if this option is used, the
                          header ``OBJECT`` keyword will not be used to
                          identify the target
-   :param -serendipity: (optional) search for serendipitous targets in
-                        the field (still experimental)
+   :param -variable_stars: (optional) match source catalog with the
+                           VSX catalog to identify and extract
+                           variable stars
+   :param -asteroids: (optional) find serendipitously observed
+                      asteroids in the image field using IMCCE's
+                      SkyBoT service; extract objects that are bright
+                      enough and have accurate orbits
+
    :param images:  images to run `pp_distill` on
 
    This function will automatically read the target name from the FITS
@@ -333,7 +339,14 @@ the logical order:
    image of the series - this star serves as a control star to check
    the consistency of the derive magnitude zeropoints. If either the
    `-positions` or `-fixedtargets` option is used, JPL Horizons will
-   not be queried.
+   not be queried, same if `-asteroids` is used. The latter will query
+   the target field using IMCCE's SkyBoT service and extract asteroids
+   from the source catalog that have positional uncertainties less
+   than 5 pixels (un-binned) and are brighter than 90% of the sources
+   in the field. Note that both the options `-variable_stars` and
+   `-asteroids` will extract the source that matches the provided
+   target position best - confusion with an unrelated source is
+   possible.
 
 
 Functions that provide additional functionality:

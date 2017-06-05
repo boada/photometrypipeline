@@ -109,10 +109,10 @@ pp_process_idx = 0
 # Translation table to transform target names to file names
 # space and / --> _
 if sys.version_info > (3, 0):
-    target2filename = str.maketrans(' /', '__')
+    target2filename = str.maketrans(' /()', '____')
 else:
     import string
-    target2filename = string.maketrans(' /', '__')
+    target2filename = string.maketrans(' /()', '____')
 
 # available catalogs
 

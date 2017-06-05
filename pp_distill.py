@@ -39,9 +39,16 @@ matplotlib.use('Agg')
 import matplotlib.pylab as plt
 from scipy.optimize import minimize
 import callhorizons
+from astropy.table import Table
+from astropy.io import ascii
 import scipy.ndimage.interpolation
-
-
+try:
+    from astroquery.vizier import Vizier
+except ImportError:
+    print('Module astroquery not found. Please install with: pip install '
+          'astroquery')
+    sys.exit()
+    
 # only import if Python3 is used
 if sys.version_info > (3,0):
     from builtins import str
@@ -248,7 +255,7 @@ def moving_primary_target(catalogs, man_targetname, offset, is_asteroid=None,
                 message_shown = True
 
         else:
-            objects.append({'ident': cat.obj,
+            objects.append({'ident': eph[0]['targetname'].replace(" ", "_"),
                             'obsdate.jd': cat.obstime[0],
                             'cat_idx'   : cat_idx,
                             'ra.deg'    : eph[0]['RA']-old_div(offset[0],3600.),
@@ -296,55 +303,141 @@ def fixed_targets(fixed_targets_file, catalogs, display=True):
     return objects
 
 
-### ---- search for serendipitous observations
-
-def serendipitous_asteroids(catalogs, display=True):
-    return []
+### ---- search for serendipitous targets
 
 def serendipitous_variablestars(catalogs, display=True):
-    """match catalogs with VSX catalog
-    (http://cdsarc.u-strasbg.fr/viz-bin/Cat?cat=B%2Fvsx&target=readme&)
-    contact me if you would like to use this feature"""
-
-    # check if VSX database exists
-    if _pp_conf.vsx_database_file is None or \
-       not os.path.exists(_pp_conf.vsx_database_file):
-        if display:
-            print('# cannot find vsx.dat file - variable star search aborted')
-        logging.info('cannot find vsx.dat file - variable star search aborted')
-        return []
+    """match catalogs with VSX catalog using astroquery.Vizier
+    """
 
     if display:
-        print('# match frames with variable star database... ', end=' ')
-        sys.stdout.flush()
+        print('# match frames with variable star database... ', end=' ',
+              flush=True)
     logging.info('match frames with variable star database')
 
 
-    # connect to VSX database
-    db_conn = sql.connect(_pp_conf.vsx_database_file)
-    db = db_conn.cursor()
+    ### derive center and radius of field of view of all images
+    ra_deg, dec_deg, rad_deg = skycenter(catalogs)
+    logging.info('FoV center (%.7f/%+.7f) and radius (%.2f deg) derived' %  
+                 (ra_deg, dec_deg, rad_deg))
+        
+    # derive observation midtime of sequence
+    midtime = numpy.average([cat.obstime[0] for cat in catalogs])
+
+   
+    ### setup Vizier query
+    # note: column filters uses original Vizier column names
+    # -> green column names in Vizier
+    
+    logging.info(('query Vizier for VSX at %7.3f/%+8.3f in ' \
+                  + 'a %.2f deg radius') % \
+                 (ra_deg, dec_deg, rad_deg))
+        
+    field = coord.SkyCoord(ra=ra_deg, dec=dec_deg, unit=(u.deg, u.deg),
+                           frame='icrs')
+
+
+    vquery = Vizier(columns=['Name', 'RAJ2000', 'DEJ2000'])
+    try:
+        data = vquery.query_region(field,
+                                   width=("%fd" % rad_deg),
+                                   catalog="B/vsx/vsx")[0]
+    except IndexError:
+        if display:
+            print('no data available from VSX')
+            logging.error('no data available from VSX')
+            return []
 
     objects = []
-    for cat_idx, catalog in enumerate(catalogs):
-        # identify ra and dec ranges
-        ra = (numpy.min(catalog['ra.deg']), numpy.max(catalog['ra.deg']))
-        dec = (numpy.min(catalog['dec.deg']), numpy.max(catalog['dec.deg']))
-
-        # query database
-        db.execute(('SELECT * from vsx WHERE ((ra < %f) & (ra > %f) & ' +
-                    '(dec < %f) & (dec > %f))') % (ra[1], ra[0],
-                                                   dec[1], dec[0]))
-
-        stars = db.fetchall()
-        for star in stars:
-            objects.append({'ident': star[0].strip(),
-                            'obsdate.jd': catalog.obstime[0],
+    for cat_idx, cat in enumerate(catalogs):
+        for star in data:
+            objects.append({'ident': star['Name'],
+                            'obsdate.jd': cat.obstime[0],
                             'cat_idx'   : cat_idx,
-                            'ra.deg'    : star[1],
-                            'dec.deg'   : star[2]})
+                            'ra.deg'    : star['RAJ2000'],
+                            'dec.deg'   : star['DEJ2000']})
 
     if display:
         print(old_div(len(objects),len(catalogs)), 'variable stars found')
+
+    return objects
+
+
+def serendipitous_asteroids(catalogs, display=True):
+
+    import requests
+    server = 'http://vo.imcce.fr/webservices/skybot/skybotconesearch_query.php'
+    
+    if display:
+        print('# check frames with IMCCE SkyBoT... ', end=' ')
+        sys.stdout.flush()
+    logging.info('check frames with IMCCE SkyBoT')
+
+    # todo: smarter treatment of limiting magnitude and pos. uncertainty
+
+    # identify limiting magnitude (95 percentile in calibrated magnitude)
+    band_key = None
+    for key in catalogs[0].fields:
+        if 'mag' in key and not '_e_' in key:
+            band_key = key
+
+    if band_key is None:
+        if display:
+            print(('Error: No calibrated magnitudes found '
+                   'in catalog "{:s}"').format(catalogs[0].catalogname), 
+                  flush=True)
+        logging.error(('No calibrated magnitudes found '
+                       'in catalog "{:s}"').format(catalogs[0].catalogname))
+        return []
+
+    maglims = [numpy.percentile(cat[band_key], 95) for cat in catalogs] 
+
+    # maximum positional uncertainty = 5 px (unbinned)
+    obsparam = _pp_conf.telescope_parameters[
+                        catalogs[0].origin.split(';')[0].strip()]
+    max_posunc = 5*max(obsparam['secpix'])
+    
+    ### derive center and radius of field of view of all images
+    ra_deg, dec_deg, rad_deg = skycenter(catalogs)
+    logging.info('FoV center (%.7f/%+.7f) and radius (%.2f deg) derived' %  
+                 (ra_deg, dec_deg, rad_deg))
+        
+    # derive observation midtime of sequence
+    midtime = numpy.average([cat.obstime[0] for cat in catalogs])
+
+    r = requests.get(server, 
+                     params= {'RA': ra_deg, 'DEC': dec_deg, 
+                              'SR': rad_deg, 'EPOCH': str(midtime),
+                              '-output': 'object',
+                              '-mime': 'text'},
+                     timeout=180)
+
+    results = ascii.read(r.text, delimiter='|',
+                         names=('number', 'name', 'ra', 'dec', 'type',
+                                'V', 'posunc', 'd'))
+    
+    objects = []
+    for obj in results:
+        if obj['posunc'] > max_posunc:
+            logging.warning(('asteroid {:s} rejected due to large '
+                             'pos. unc ({:f} > {:f} arcsec)').format(
+                                 obj['name'],
+                                 obj['posunc'],
+                                 max_posunc))
+            continue
+        if obj['V'] > max(maglims):
+            logging.warning(('asteroid {:s} rejected; too faint '
+                             '({:f} mag)').format(obj['name'],
+                                                  obj['V']))
+            continue
+
+        objects += moving_primary_target(catalogs, obj['name'], (0,0),
+                                         display=False)
+
+        logging.info(('asteroid {:s} added to '
+                      'target pool').format(obj['name']))
+
+    if display:
+        print(old_div(len(objects),len(catalogs)), 'asteroids found')
 
     return objects
 
@@ -354,7 +447,8 @@ def serendipitous_variablestars(catalogs, display=True):
 
 
 def distill(catalogs, man_targetname, offset, fixed_targets_file, posfile,
-            display=False, diagnostics=False, serendipity=False):
+            display=False, diagnostics=False, variable_stars=False,
+            asteroids=False):
 
     """
     distill wrapper
@@ -402,7 +496,7 @@ def distill(catalogs, man_targetname, offset, fixed_targets_file, posfile,
     objects += pick_controlstar(catalogs, display=display)
 
     ### check Horizons for primary target (if a moving target)
-    if posfile is None and fixed_targets_file is None:
+    if posfile is None and fixed_targets_file is None and asteroids is False:
         objects += moving_primary_target(catalogs, man_targetname, offset,
                                          display=display)
 
@@ -411,11 +505,11 @@ def distill(catalogs, man_targetname, offset, fixed_targets_file, posfile,
         objects += fixed_targets(fixed_targets_file, catalogs, display=display)
 
     ### serendipitous asteroids
-    if serendipity:
+    if asteroids:
         objects += serendipitous_asteroids(catalogs, display=display)
 
     ### serendipitous variable stars
-    if serendipity:
+    if variable_stars:
         objects += serendipitous_variablestars(catalogs, display=display)
 
     if display:
@@ -424,13 +518,6 @@ def distill(catalogs, man_targetname, offset, fixed_targets_file, posfile,
     if display:
         print(old_div(len(objects),len(catalogs)), \
             'potential target(s) per frame identified.')
-        # print len(objects)/len(catalogs), \
-        #     'potential target(s) per frame identified:', \
-        #     ", ".join(set([obj['ident'] for obj in objects]))
-
-    # logging.info('%d potential targets per frame identified: %s' %
-    #              (int(old_div(len(objects),len(catalogs))),
-    #               ", ".join(set([obj['ident'] for obj in objects]))))
 
 
     ##### extract source data for identified targets
@@ -618,15 +705,21 @@ if __name__ == '__main__':
                         nargs=2, default=[0,0])
     parser.add_argument('-positions', help='positions file', default=None)
     parser.add_argument('-fixedtargets', help='target file', default=None)
-    parser.add_argument('-serendipity',
-                        help='search for serendipitous observations',
+    parser.add_argument('-variable_stars',
+                        help=('search for serendipitous variable star '
+                              'observations'),
                         action="store_true")
+    parser.add_argument('-asteroids',
+                        help='search for serendipitous asteroid observations',
+                        action="store_true")
+
     parser.add_argument('images', help='images to process', nargs='+')
     args = parser.parse_args()
     man_targetname = args.target
     man_offset = [float(coo) for coo in args.offset]
     fixed_targets_file = args.fixedtargets
-    serendipity = args.serendipity
+    variable_stars = args.variable_stars
+    asteroids = args.asteroids
     posfile = args.positions
     filenames = args.images
 
@@ -639,6 +732,7 @@ if __name__ == '__main__':
     distillate = distill(filenames, man_targetname, man_offset,
                          fixed_targets_file,
                          posfile, display=True, diagnostics=True,
-                         serendipity=serendipity)
+                         variable_stars=variable_stars,
+                         asteroids=asteroids)
 
 

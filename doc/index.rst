@@ -43,10 +43,8 @@ The following features are currently available as part of PP:
 * Python 2 and 3 compatibility (thanks to `boada`_)
   
 Future versions of the pipeline will support newly available catalogs
-for astrometry and photometry (e.g., GAIA DR2) and enable the extraction
-of serendipitously observed targets of interests, e.g., variable stars
-or moving targets. If you are interesting in using PP for a specific
-task, let me know!
+for astrometry and photometry (e.g., GAIA DR2). If you are interesting
+in using PP for a specific task, let me know!
 
 
 Contents
