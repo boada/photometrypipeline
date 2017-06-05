@@ -1408,9 +1408,8 @@ kpno4mos1_param = {
     'filter_translations': {'g SDSS k1017': 'g',
                             'r SDSS k1018': 'r',
                             'i SDSS k1019': 'i',
-                            'z SDSS c6020': 'z', # mosaic1.1
-                            'z SDSS k1020': 'z', # mosaic3
-                            'B Harris k1002': 'B',
+                            'z SDSS c6020': 'z', # mosaic1.1/3
+                            'z SDSS k1020': 'z', # broken filter
                             'none': None},
     # filtername translation dictionary
     'exptime': 'EXPTIME',  # exposure time keyword (s)
@@ -1433,7 +1432,7 @@ kpno4mos1_param = {
 
     # default catalog settings
     'astrometry_catalogs': ['GAIA'],
-    'photometry_catalogs': ['SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
+    'photometry_catalogs': ['SDSS-R13', 'PANSTARRS', 'APASS9', '2MASS']
 }
 
 # KPNO 4m Mayall, MOSAIC3
@@ -1491,7 +1490,7 @@ kpno4mos3_param = {
 
     # default catalog settings
     'astrometry_catalogs': ['GAIA'],
-    'photometry_catalogs': ['SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
+    'photometry_catalogs': ['SDSS-R13', 'PANSTARRS', 'APASS9', '2MASS']
 }
 
 # KPNO 4m Mayall, NEWFIRM
