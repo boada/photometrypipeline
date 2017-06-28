@@ -21,7 +21,7 @@ try:
 except ImportError:
     print('Module numpy not found. Please install with: pip install numpy')
     sys.exit()
-    
+
 # import pipeline-specific modules
 from toolbox import *
 
@@ -141,7 +141,7 @@ min_sources_astrometric_catalog = 10
 n_registration_repetitions = 2
 
 # minimum number of reference sources in photometric reference catalog
-min_sources_photometric_catalog = 3
+min_sources_photometric_catalog = 10
 
 # SCAMP contrast criteria for a good fit
 scamp_as_contrast_limit = 2.5

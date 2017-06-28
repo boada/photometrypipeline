@@ -60,7 +60,7 @@ logging.basicConfig(filename = _pp_conf.log_filename,
 def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
                              preferred_catalogs,
                         min_sources=_pp_conf.min_sources_photometric_catalog,
-                             max_sources=1e4, mag_accuracy=0.1,
+                             max_sources=5e3, mag_accuracy=0.1,
                              display=False):
     """create a photometric catalog of the field of view"""
 
@@ -76,13 +76,13 @@ def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
             continue
 
         if 'URAT' in catalogname:
-            print(catalogname + ' should only be used as an astrometric ' 
+            print(catalogname + ' should only be used as an astrometric '
                   'catalog; please use APASS9 instead')
             logging.error(catalogname + ' should only be used as an '
                           'astrometric catalog; please use APASS9 instead')
             return None
 
-        
+
         # transform catalog to requested filtername, if necessesary
         if ( n_sources > 0 and
              ('SDSS' in catalogname and
@@ -92,7 +92,7 @@ def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
              ('APASS' in catalogname and
               filtername not in {'B', 'V', 'g', 'r', 'i'}) or
              ('2MASS' in catalogname and
-              filtername not in {'J', 'H', 'K'}) or 
+              filtername not in {'J', 'H', 'K'}) or
              ('PANSTARRS' in catalogname and
               filtername not in {'g', 'r', 'i', 'z', 'y'}) ):
 
@@ -132,9 +132,6 @@ def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
                              (min_sources, n_sources))
                 continue
 
-
-
-
     # end up here if none of the catalogs has n_sources > min_sources
     if display:
         print('ERROR: not enough sources in reference catalog %s (%d)' % \
@@ -142,8 +139,6 @@ def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
     logging.warning('not enough sources in reference catalog %s (%d)' % \
                     (catalogname, n_sources))
     return None
-
-
 
 
 def derive_zeropoints(ref_cat, catalogs, filtername, minstars_external,
@@ -207,8 +202,9 @@ def derive_zeropoints(ref_cat, catalogs, filtername, minstars_external,
         #  [zeropoint, sigma, chi2, source indices in match array, match]
 
         # fewer than 3 reference stars -> skip this catalog
-        if len(residuals) < 3:
+        if len(residuals) < 10:
             if display:
+                print('here?')
                 print(('Warning: %d reference stars after source matching ' \
                        + 'for frame %s') % (len(residuals), cat.catalogname))
                 logging.warning(('Warning: %d reference stars after source ' \
@@ -242,7 +238,7 @@ def derive_zeropoints(ref_cat, catalogs, filtername, minstars_external,
 
         # perform clipping to reject one outlier at a time
         zeropoint = 25 # initialize zeropoint
-        while len(residuals) >= 3:
+        while len(residuals) >= 10:
             fchi2 = lambda zp: numpy.sum([old_div((zp-residuals)**2,residuals_sig)])
             #fchi2 = lambda zp: numpy.sum((zp-residuals)**2) # unweighted
 
@@ -388,7 +384,7 @@ def calibrate(filenames, minstars, manfilter, manualcatalog,
 
     ### derive center and radius of field of view of all images
     ra_deg, dec_deg, rad_deg = skycenter(catalogs)
-    logging.info('FoV center (%.7f/%+.7f) and radius (%.2f deg) derived' %  
+    logging.info('FoV center (%.7f/%+.7f) and radius (%.2f deg) derived' %
                  (ra_deg, dec_deg, rad_deg))
 
     ### obtain photometric catalog(s) of the field based on settings in
@@ -470,7 +466,7 @@ def calibrate(filenames, minstars, manfilter, manualcatalog,
 
         ### update diagnostics website
         diag.add_calibration_instrumental(output)
-        
+
         return output
 
     ### match catalogs and derive magnitude zeropoint

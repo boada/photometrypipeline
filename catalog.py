@@ -206,6 +206,8 @@ class catalog(object):
                               [mags], [e_mags], epoch_jd
         """
 
+        max_sources = 5000
+
         ### setup Vizier query
         # note: column filters uses original Vizier column names
         # -> green column names in Vizier
@@ -243,12 +245,12 @@ class catalog(object):
                 logging.warning('MAST does currently not allow for PANSTARRS '
                                 'catalog queries with radii larger '
                                 'than 0.5 deg; clip radius to 0.5 deg')
-                print ('MAST does currently not allow for PANSTARRS '
+                print('MAST does currently not allow for PANSTARRS '
                        'catalog queries with radii larger '
                        'than 0.5 deg; clip radius to 0.5 deg')
 
             r = requests.get(server,
-                             params= {'RA': ra_deg, 'DEC': dec_deg,
+                             params={'RA': ra_deg, 'DEC': dec_deg,
                                       'SR': rad_deg,
                                       'max_records': int(max_sources),
                                       'outputformat': 'VOTABLE',
