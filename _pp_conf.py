@@ -144,7 +144,7 @@ n_registration_repetitions = 2
 min_sources_photometric_catalog = 10
 
 # SCAMP contrast criteria for a good fit
-scamp_as_contrast_limit = 2.5
+scamp_as_contrast_limit = 2.
 scamp_xy_contrast_limit = 2.5
 
 # positional uncertainty (arcsec) for target identification and
