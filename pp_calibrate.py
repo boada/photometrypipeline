@@ -204,7 +204,6 @@ def derive_zeropoints(ref_cat, catalogs, filtername, minstars_external,
         # fewer than 3 reference stars -> skip this catalog
         if len(residuals) < 10:
             if display:
-                print('here?')
                 print(('Warning: %d reference stars after source matching ' \
                        + 'for frame %s') % (len(residuals), cat.catalogname))
                 logging.warning(('Warning: %d reference stars after source ' \
@@ -413,7 +412,7 @@ def calibrate(filenames, minstars, manfilter, manualcatalog,
     if filtername is not None:
         ref_cat = create_photometrycatalog(ra_deg, dec_deg, rad_deg,
                                            filtername, preferred_catalogs,
-                                           max_sources=2e4, display=display)
+                                           max_sources=5e3, display=display)
     else:
         ref_cat = None
 
