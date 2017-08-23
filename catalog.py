@@ -73,6 +73,9 @@ if sys.version_info > (3,0):
 # pipeline-related modules (only needed for testing)
 import _pp_conf
 
+# set Vizier server mirror
+Vizier.VIZER_SERVER = 'vizier.cfa.harvard.edu'
+
 # setup logging
 logging.basicConfig(filename = _pp_conf.log_filename,
                     level    = _pp_conf.log_level,
@@ -224,6 +227,8 @@ class catalog(object):
         field = coord.SkyCoord(ra=ra_deg, dec=dec_deg, unit=(u.deg, u.deg),
                                frame='icrs')
 
+        # set Vizier server
+        Vizier.VIZER_SERVER = 'vizier.cfa.harvard.edu'
 
 
         # ---------------------------------------------------------------------
