@@ -1410,6 +1410,7 @@ kpno4mos1_param = {
                             'i SDSS k1019': 'i',
                             'z SDSS c6020': 'z', # mosaic1.1/3
                             'z SDSS k1020': 'z', # broken filter
+                            'KXs': 'K',
                             'none': None},
     # filtername translation dictionary
     'exptime': 'EXPTIME',  # exposure time keyword (s)
@@ -1441,6 +1442,7 @@ kpno4mos3_param = {
     'telescope_keyword': 'KPNO4MOS3',  # telescope/instrument keyword
     'observatory_code': '695',  # MPC observatory code
     'secpix': (0.25, 0.25),  # pixel size (arcsec) before binning
+    #'secpix': (0.2666, 0.2666),  # pixel size (arcsec) before binning
 
     # image orientation preferences
     'flipx': True,
@@ -1468,6 +1470,7 @@ kpno4mos3_param = {
                             'i SDSS k1019': 'i',
                             'z SDSS c6020': 'z',
                             'B Harris k1002': 'B',
+                            'KXs': 'K',
                             'none': None},
     # filtername translation dictionary
     'exptime': 'EXPTIME',  # exposure time keyword (s)
@@ -1499,6 +1502,7 @@ kpno4newf_param = {
     'telescope_keyword': 'KPNO4NEWF',  # telescope/instrument keyword
     'observatory_code': '695',  # MPC observatory code
     'secpix': (0.4, 0.4),  # pixel size (arcsec) before binning
+    #'secpix': (0.2666, 0.2666),  # pixel size (arcsec) before binning
 
     # image orientation preferences
     'flipx': True,
@@ -1531,8 +1535,8 @@ kpno4newf_param = {
     # source extractor settings
     'source_minarea': 5,  # default sextractor source minimum N_pixels
     'source_snr': 1.5,  # default sextractor snr for registration
-    'aprad_default': 5,  # default aperture radius in px
-    'aprad_range': [2, 10],  # [minimum, maximum] aperture radius (px)
+    'aprad_default': 10,  # default aperture radius in px
+    'aprad_range': [5, 20],  # [minimum, maximum] aperture radius (px)
     'sex-config-file': rootpath + '/setup/kpno4mos1.sex',
     'mask_file': {},
     #                        mask files as a function of x,y binning
@@ -1545,7 +1549,7 @@ kpno4newf_param = {
 
     # default catalog settings
     'astrometry_catalogs': ['GAIA'],
-    'photometry_catalog': ['2MASS']
+    'photometry_catalogs': ['2MASS']
 }
 
 # SALT, SALTICAM
