@@ -59,7 +59,7 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
     registration wrapper
     output: diagnostic properties
     """
-    
+
     # start logging
     logging.info('starting registration with parameters: %s' % \
                  (', '.join([('%s: %s' % (var, str(val))) for
@@ -97,7 +97,7 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
         extractparameters = {'sex_snr':sex_snr,
                              'source_minarea':source_minarea, \
                              'aprad':aprad, 'telescope':telescope, \
-                             'ignore_saturation':True, 
+                             'ignore_saturation':True,
                              'global_background': True,
                              'quiet':False}
 
@@ -117,7 +117,7 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
             if frame['catalog_data'].shape[0] > 10:
                 ldac_files.append(frame['ldac_filename'])
                 cat = catalog(frame['ldac_filename'])
-                cat.read_ldac(frame['ldac_filename'], 
+                cat.read_ldac(frame['ldac_filename'],
                               frame['fits_filename'],
                               object_keyword=obsparam['object'],
                               exptime_keyword=obsparam['exptime'],
