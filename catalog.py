@@ -396,12 +396,12 @@ class catalog(object):
 
             self.data.add_column(Column(numpy.ones(len(self.data))*2457023.5,
                                         name='epoch_jd', unit=u.day))
-            
+
             ### TBD:
             # - implement pm progragation
             # - implement proper error ellipse handling
 
-            
+
         elif self.catalogname == '2MASS':
             # photometric catalog
             vquery = Vizier(columns=['2MASS', 'RAJ2000', 'DEJ2000', 'errMaj',
@@ -420,6 +420,14 @@ class catalog(object):
                     print('no data available from %s' % self.catalogname)
                 logging.error('no data available from %s' % self.catalogname)
                 return 0
+
+            # filter columns to only have really good detections
+            # see the Vizier webpage for a description of what the flags mean
+            Qflags = set('AB') # only A and B flagged detections
+            qmask = [True if not set(item).difference(Qflags) else False
+                        for item in self.data['Qflg']]
+            # filter columns to only have really good detections
+            self.data = self.data[qmask]
 
             ### rename column names using PP conventions
             self.data.rename_column('_2MASS', 'ident')
