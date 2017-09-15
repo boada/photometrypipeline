@@ -146,8 +146,9 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
         del(ldac_catalogs)
 
         checkrefcat = catalog(refcat, display=False)
-        n_sources = checkrefcat.download_catalog(ra, dec, rad, 100,
-                                                 save_catalog=False)
+        n_sources = checkrefcat.download_catalog(ra, dec,
+                                            rad+obsparam['reg_search_radius'],
+                                            100, save_catalog=False)
         if n_sources < _pp_conf.min_sources_astrometric_catalog:
             logging.info(('Only %d sources in astrometric reference catalog; ' \
                           + 'try other catalog') % n_sources)

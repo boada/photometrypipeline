@@ -316,6 +316,12 @@ def prepare(filenames, obsparam, header_update, flipx=False,
                                        'PP: old value for %s' % key)
             header[key] = (value, 'PP: manually updated')
 
+        # check if OBJECT keyword is available
+        if 'OBJECT' not in header:
+            header['OBJECT'] = 'None'
+        elif len(header['OBJECT'].strip()) == 0:
+            header['OBJECT'] = 'None'
+            
         # # check if RA, Dec, airmass headers are available;
         # #   else: query horizons
         # # to get approximate information
@@ -412,12 +418,16 @@ def prepare(filenames, obsparam, header_update, flipx=False,
                             'PP: fake Coordinate reference pixel')
 
         # plugin default distortion parameters, if available
-        if 'distort' in obsparam and 'functionof' in obsparam['distort']:
-            try:
+        if 'distort' in obsparam:
+            if 'functionof' in obsparam['distort']:
                 pv_dict = obsparam['distort'][header[obsparam['distort']
                                                      ['functionof']]]
+            else:
+                pv_dict = obsparam['distort']
+
+            try:
                 for pv_key, pv_val in pv_dict.items():
-                    header[pv_key] = pv_val
+                    header[pv_key] = (pv_val, 'PP: default distortion')
             except KeyError:
                 logging.error(('No distortion coefficients available for %s '
                               '%s') % (obsparam['distort']['functionof'],

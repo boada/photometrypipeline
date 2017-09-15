@@ -21,6 +21,13 @@ General Problems
    but they happen occasionally. If you are haunted by some warnings,
    let me know and I will try to resolve the issue.
 
+**I get an error message like `Intel MKL FATAL ERROR: Cannot load
+ libmkl_avx2.so or libmkl_def.so.`. What do I have to do?**
+   This seems to be a problems with your numpy or scipy
+   installation. Try to install the latest versions of both
+   packages. If you are using anaconda, try `conda install -f numpy`
+   and `conda install -f scipy`.
+   
   
 pp_calibrate (Photometric Calibration)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

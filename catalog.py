@@ -264,7 +264,7 @@ class catalog(object):
                              timeout=180)
 
             # write query data into local file
-            outf = open('panstarrs.xml', 'wr')
+            outf = open('panstarrs.xml', 'w')
             outf.write(r.text)
             outf.close()
 
@@ -330,7 +330,8 @@ class catalog(object):
                                      'pmDE', 'phot_g_mean_mag'],
                             column_filters={"phot_g_mean_mag":
                                             ("<%f" % max_mag)},
-                            row_limit = max_sources)
+                            row_limit = max_sources,
+                            timeout = 300)
 
             try:
                 self.data = vquery.query_region(field,
@@ -360,6 +361,47 @@ class catalog(object):
             # - implement proper error ellipse handling
             # - implement propor motion handling for DR2
 
+        # --------------------------------------------------------------------
+
+        elif self.catalogname == 'TGAS':
+            # astrometric catalog
+            vquery = Vizier(columns=['Source', 'RA_ICRS', 'DE_ICRS',
+                                     'e_RA_ICRS', 'e_DE_ICRS', 'pmRA',
+                                     'pmDE', 'phot_g_mean_mag'],
+                            column_filters={"phot_g_mean_mag":
+                                            ("<%f" % max_mag)},
+                            row_limit = max_sources,
+                            timeout = 300)
+
+            try:
+                self.data = vquery.query_region(field,
+                                                width=("%fd" % rad_deg),
+                                                catalog="I/337/tgas")[0]
+            except IndexError:
+                if self.display:
+                    print('no data available from %s' % self.catalogname)
+                logging.error('no data available from %s' % self.catalogname)
+                return 0
+
+
+            ### rename column names using PP conventions
+            self.data.rename_column('Source', 'ident')
+            self.data.rename_column('RA_ICRS', 'ra.deg')
+            self.data.rename_column('DE_ICRS', 'dec.deg')
+            self.data.rename_column('e_RA_ICRS', 'e_ra.deg')
+            self.data['e_ra.deg'].convert_unit_to(u.deg)
+            self.data.rename_column('e_DE_ICRS', 'e_dec.deg')
+            self.data['e_dec.deg'].convert_unit_to(u.deg)
+            self.data.rename_column('__Gmag_', 'mag')
+
+            self.data.add_column(Column(numpy.ones(len(self.data))*2457023.5,
+                                        name='epoch_jd', unit=u.day))
+            
+            ### TBD:
+            # - implement pm progragation
+            # - implement proper error ellipse handling
+
+            
         elif self.catalogname == '2MASS':
             # photometric catalog
             vquery = Vizier(columns=['2MASS', 'RAJ2000', 'DEJ2000', 'errMaj',

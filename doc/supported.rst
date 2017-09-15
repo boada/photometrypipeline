@@ -26,6 +26,12 @@ observatories/instruments:
 +--------------------------+--------------------+----------------+
 | KMTnet SAAO              | --- (*)            | KMTNETS        |
 +--------------------------+--------------------+----------------+
+| KPNO 4m                  | Mosaic 1           | KPNO4MOS1      |
++--------------------------+--------------------+----------------+
+| KPNO 4m                  | Mosaic 3           | KPNO4MOS3      |
++--------------------------+--------------------+----------------+
+| KPNO 4m                  | NEWFIRM            | KPNO4NEWF      |
++--------------------------+--------------------+----------------+
 | Lowell 31"               | NASACAM            | LOWELL31       |
 +--------------------------+--------------------+----------------+
 | Lowell 42"               | NASA42             | LOWELL42       |
@@ -37,6 +43,8 @@ observatories/instruments:
 +--------------------------+--------------------+----------------+
 | SOAR 4.1m                | Goodman (**)       | SOARGOODMAN    |
 +--------------------------+--------------------+----------------+
+| San Pedro Martir 84cm    | Mexman (E2V CCD)   | MEXMAN         |
++--------------------------+--------------------+----------------+
 | Telescopio Nazionale     | DOLORES            | TNGDOLORES     |
 | Galileo                  |                    |                |
 +--------------------------+--------------------+----------------+
@@ -47,6 +55,8 @@ observatories/instruments:
 +--------------------------+--------------------+----------------+
 | Generic Telescope        | any                | GENERIC        |
 +--------------------------+--------------------+----------------+
+
+
 
 (*): This camera is a multi-detector instrument; it is recommended to
 split multi-extension FITS frames from this instrument into individual
@@ -74,7 +84,9 @@ photometric calibration:
 +------------------------+--------------------------+---------------+--------------------------+------------------------------------------------------------+
 | Catalog Name           | Catalog Type             | Registration? | Filter Bands             | Comments                                                   |
 +========================+==========================+===============+==========================+============================================================+
-| Gaia DR1 (`Gaia`_)     | astrometric              | yes           | G                        | all-sky catalog, excellent astrometry                      |
+| Gaia DR1 (`Gaia`_)     | astrometric              | yes           | G                        | all-sky catalog, excellent astrometry, G < 20 mag          |
++------------------------+--------------------------+---------------+--------------------------+------------------------------------------------------------+
+| Gaia/TGAS (`TGAS`_)    | astrometric              | yes           | G                        | all-sky catalog, excellent astrometry, G < 12 mag          |
 +------------------------+--------------------------+---------------+--------------------------+------------------------------------------------------------+
 | 2MASS (`2MASS`_)       | astrometric/photometric  | yes           | J, H, Ks, K* (Vega)      | all-sky NIR catalog, good astrometry                       |
 +------------------------+--------------------------+---------------+--------------------------+------------------------------------------------------------+
@@ -127,6 +139,7 @@ Independent checks indicate that these transformations are reliable and accurate
 .. _Tonry et al. 2012: http://adsabs.harvard.edu/abs/2012ApJ...750...99T
 
 .. _Gaia: http://sci.esa.int/gaia/
+.. _TGAS: https://gaia.esac.esa.int/documentation/GDR1/Data_processing/chap_cu3tyc/
 .. _2MASS: http://www.ipac.caltech.edu/2mass/
 .. _URAT-1: http://cdsads.u-strasbg.fr/cgi-bin/nph-bib_query?2015AJ....150..101Z&db_key=AST&nosetcookie=1
 .. _SDSS-R9: http://www.sdss3.org/dr9/

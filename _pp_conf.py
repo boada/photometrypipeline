@@ -118,7 +118,7 @@ else:
 
 # list of available catalogs
 allcatalogs = ['URAT-1', '2MASS', 'SDSS-R9', 'SDSS-R13', 'APASS9', 'GAIA',
-               'PANSTARRS']
+               'PANSTARRS', 'TGAS']
 
 # catalog magnitude systems
 allcatalogs_magsys = {'URAT-1': 'Vega',
@@ -127,7 +127,8 @@ allcatalogs_magsys = {'URAT-1': 'Vega',
                       'SDSS-R13': 'AB',
                       'APASS9': 'Vega',
                       'GAIA': 'Vega',
-                      'PANSTARRS': 'AB'}
+                      'PANSTARRS': 'AB',
+                      'TGAS': 'Vega'}
 
 # ---- pipeline preferences
 # (if you don't know what you're doing, better don't mess around here)
