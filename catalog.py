@@ -406,7 +406,8 @@ class catalog(object):
             # photometric catalog
             vquery = Vizier(columns=['2MASS', 'RAJ2000', 'DEJ2000', 'errMaj',
                                      'errMin', 'errPA', 'Jmag', 'e_Jmag',
-                                     'Hmag', 'e_Hmag', 'Kmag', 'e_Kmag'],
+                                     'Hmag', 'e_Hmag', 'Kmag', 'e_Kmag',
+                                     'Qflg', 'Rflg'],
                             column_filters={"Jmag":
                                             ("<%f" % max_mag)},
                             row_limit = max_sources)
@@ -423,7 +424,7 @@ class catalog(object):
 
             # filter columns to only have really good detections
             # see the Vizier webpage for a description of what the flags mean
-            Qflags = set('AB') # only A and B flagged detections
+            Qflags = set('ABC') # only A, B, or C flagged detections
             qmask = [True if not set(item).difference(Qflags) else False
                         for item in self.data['Qflg']]
             # filter columns to only have really good detections
