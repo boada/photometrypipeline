@@ -86,9 +86,9 @@ Install Python modules::
 Add these lines to the ``.bashrc`` file in your home directory and
 replace ``<path>`` with the actual path to the PP directory::
 
-  # photometry pipeline setup export
-  PHOTPIPEDIR=<path>/photometrypipeline export
-  PATH=$PATH:~<path>/photometrypipeline/
+  # photometry pipeline setup
+  export PHOTPIPEDIR=<path>/photometrypipeline
+  export PATH=$PATH:~<path>/photometrypipeline/
 
 Kudos to `towicode`_ for figuring out the SCAMP requirements.
   

@@ -76,15 +76,16 @@ vatt4k_param = {
     'source_tolerance': 'high',
 
     # swarp settings
-    'copy_keywords': ('TELESCOP,INSTRUME,FILTER,EXPTIME,OBJECT,' +
-                      'DATE-OBS,TIME-OBS,RA,DEC,SECPIX,AIRMASS,' + 'TEL_KEYW'),
+    'copy_keywords'        : ('TELESCOP,INSTRUME,FILTER,EXPTIME,OBJECT,' +
+                              'DATE-OBS,TIME-OBS,RA,DEC,SECPIX,AIRMASS,' +
+                              'TEL_KEYW,CCDBIN1,CCDBIN2,MIDTIMJD'),
     #                         keywords to be copied in image
     #                         combination using swarp
     'swarp-config-file': rootpath + '/setup/vatt4k.swarp',
 
     # default catalog settings
-    'astrometry_catalogs': ['GAIA'],
-    'photometry_catalogs': ['SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
+    'astrometry_catalogs'  : ['GAIA'], 
+    'photometry_catalogs'  : ['PANSTARRS', 'SDSS-R9', 'APASS9']
 }
 
 # DCT, LMI
@@ -102,36 +103,33 @@ dctlmi_param = {
     'rotate': 0,
 
     # instrument-specific FITS header keywords
-    'binning': ('CCDSUM_blank0', 'CCDSUM_blank1'),
-    # binning in x/y, '_blankN' denotes that both axes
-    # are listed in one keyword, sep. by blanks
-    'extent': ('NAXIS1', 'NAXIS2'),  # N_pixels in x/y
-    'ra': 'RA',  # telescope pointing, RA
-    'dec': 'DEC',  # telescope pointin, Dec
-    'radec_separator': ':',  # RA/Dec hms separator, use 'XXX'
-    # if already in degrees
-    'date_keyword': 'DATE-OBS',  # obs date/time
-    # keyword; use
-    # 'date|time' if
-    # separate
-    'obsmidtime_jd': 'MIDTIMJD',  # obs midtime jd keyword
-    # (usually provided by
-    # pp_prepare
-    'object': 'OBJECT',  # object name keyword
-    'filter': 'FILTERS',  # filter keyword
-    'filter_translations': {'V': 'V',
-                            'R': 'R',
-                            'B': 'B',
-                            'VR': None,
-                            'I': 'I',
-                            'SDSS-U': 'u',
-                            'SDSS-G': 'g',
-                            'UC': None,
-                            'NH': None,
-                            'BC': None},
-    # filtername translation dictionary
-    'exptime': 'EXPTIME',  # exposure time keyword (s)
-    'airmass': 'AIRMASS',  # airmass keyword
+    'binning'              : ('CCDSUM#blank0', 'CCDSUM#blank1'), 
+                           # binning in x/y, '_blankN' denotes that both axes
+                           # are listed in one keyword, sep. by blanks
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'RA',  # telescope pointing, RA
+    'dec'                  : 'DEC', # telescope pointin, Dec 
+    'radec_separator'      : ':',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'DATE-OBS', # obs date/time
+                                         # keyword; use
+                                         # 'date|time' if
+                                         # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword 
+    'filter'               : 'FILTERS',  # filter keyword
+    'filter_translations'  : {'V': 'V', 'R': 'R', 'B': 'B', 'VR': None,
+                              'I': 'I', 'SDSS-U' : 'u', 'SDSS-G' : 'g',
+                              'SDSS-R' : 'r', 'SDSS-I' : 'i', 
+                              'SDSS-Z' : 'z', 'OH': None, 'CN': None,
+                              'UC': None, 'NH': None, 'BC': None,
+                              'C2': None, 'C3': None, 'CO+': None,
+                              'H2O+': None, 'GC': None, 'RC': None},
+                             # filtername translation dictionary
+    'exptime'              : 'EXPTIME', # exposure time keyword (s)
+    'airmass'              : 'AIRMASS', # airmass keyword
 
     # source extractor settings
     'source_minarea': 9,  # default sextractor source minimum N_pixels
@@ -143,21 +141,22 @@ dctlmi_param = {
     #                        mask files as a function of x,y binning
 
     # registration settings (Scamp)
-    'scamp-config-file': rootpath + '/setup/dctlmi.scamp',
-    'reg_max_mag': 19,
-    'reg_search_radius': 0.5,  # deg
-    'source_tolerance': 'high',
+    'scamp-config-file'    : rootpath+'/setup/dctlmi.scamp', 
+    'reg_max_mag'          : 19,  
+    'reg_search_radius'    : 0.2, # deg       
+    'source_tolerance': 'high', 
 
     # swarp settings
-    'copy_keywords': ('OBSERVAT,INSTRUME,CCDFLTID,EXPTIME,OBJECT,' +
-                      'DATE-OBS,RA,DEC,SCALE,AIRMASS,TEL_KEYW'),
+    'copy_keywords'        : ('OBSERVAT,INSTRUME,EXPTIME,OBJECT,' +
+                              'DATE-OBS,RA,DEC,AIRMASS,TEL_KEYW,CCDSUM,' +
+                              'FILTERS,MIDTIMJD'),
     #                        keywords to be copied in image
     #                        combination using swarp
     'swarp-config-file': rootpath + '/setup/dctlmi.swarp',
 
     # default catalog settings
-    'astrometry_catalogs': ['GAIA'],
-    'photometry_catalogs': ['SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
+    'astrometry_catalogs'  : ['GAIA'], 
+    'photometry_catalogs'  : ['SDSS-R9', 'PANSTARRS', 'APASS9']
 }
 
 # Apache Point ARC 3.5m, ARCTIC
@@ -345,31 +344,28 @@ magimacs_param = {
     # chip offset (ra, dec in degress) [optional]
 
     # instrument-specific FITS header keywords
-    'binning': ('BINNING_x1', 'BINNING_x2'),
-    # binning in x/y, '_blankN' denotes that both axes
-    # are listed in one keyword, sep. by blanks
-    'extent': ('NAXIS1', 'NAXIS2'),  # N_pixels in x/y
-    'ra': 'RA',  # telescope pointing, RA
-    'dec': 'DEC',  # telescope pointin, Dec
-    'radec_separator': ':',  # RA/Dec hms separator, use 'XXX'
-    # if already in degrees
-    'date_keyword': 'DATE-OBS|UT-TIME',  # obs date/time
-    # keyword; use
-    # 'date|time' if
-    # separate
-    'obsmidtime_jd': 'MIDTIMJD',  # obs midtime jd keyword
-    # (usually provided by
-    # pp_prepare
-    'object': 'OBJECT',  # object name keyword
-    'filter': 'FILTER',  # filter keyword
-    'filter_translations': {'Sloan_u': 'u',
-                            'Sloan_g': 'g',
-                            'Sloan_r': 'r',
-                            'Sloan_i': 'i',
-                            'Sloan_z': 'z'},
-    # filtername translation dictionary
-    'exptime': 'EXPTIME',  # exposure time keyword (s)
-    'airmass': 'AIRMASS',  # airmass keyword
+    'binning'              : ('BINNING#x1', 'BINNING#x2'), 
+                           # binning in x/y, '_blankN' denotes that both axes
+                           # are listed in one keyword, sep. by blanks
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'RA',  # telescope pointing, RA
+    'dec'                  : 'DEC', # telescope pointin, Dec 
+    'radec_separator'      : ':',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'DATE-OBS|UT-TIME', # obs date/time
+                                         # keyword; use
+                                         # 'date|time' if
+                                         # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword 
+    'filter'               : 'FILTER',  # filter keyword
+    'filter_translations'  : {'Sloan_u': 'u', 'Sloan_g': 'g', 'Sloan_r': 'r',
+                              'Sloan_i': 'i', 'Sloan_z': 'z'},
+                             # filtername translation dictionary
+    'exptime'              : 'EXPTIME', # exposure time keyword (s)
+    'airmass'              : 'AIRMASS', # airmass keyword
 
     # source extractor settings
     'source_minarea': 20,  # default sextractor source minimum N_pixels
@@ -480,26 +476,25 @@ lowell31_param = {
     'rotate': 270,
 
     # instrument-specific FITS header keywords
-    'binning': ('CDELT1', 'CDELT2'),  # binning in x/y
-    'extent': ('NAXIS1', 'NAXIS2'),  # N_pixels in x/y
-    'ra': 'TELRA',  # telescope pointing, RA
-    'dec': 'TELDEC',  # telescope pointin, Dec
-    'radec_separator': ':',  # RA/Dec hms separator, use 'XXX'
-    # if already in degrees
-    'date_keyword': 'DATE-OBS|UT',  # obs date/time
-    # keyword; use
-    # 'date|time' if
-    # separate
-    'obsmidtime_jd': 'MIDTIMJD',  # obs midtime jd keyword
-    # (usually provided by
-    # pp_prepare
-    'object': 'OBJECT',  # object name keyword
-    'filter': 'FILTER2',  # filter keyword
-    'filter_translations': {'V': 'V',
-                            'I': 'I'},
-    # filtername translation dictionary
-    'exptime': 'EXPTIME',  # exposure time keyword (s)
-    'airmass': 'AIRMASS',  # airmass keyword
+    'binning'              : ('CCDSUM#blank1', 'CCDSUM#blank2'), # binning in x/y
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'RA',  # telescope pointing, RA
+    'dec'                  : 'DEC', # telescope pointin, Dec 
+    'radec_separator'      : ':',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'DATE-OBS|UT', # obs date/time
+                                                  # keyword; use
+                                                  # 'date|time' if
+                                                  # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword 
+    'filter'               : 'FILTER2',  # filter keyword
+    'filter_translations'  : {'V': 'V', 'I': 'I', 'clear':None},
+                             # filtername translation dictionary
+    'exptime'              : 'EXPTIME', # exposure time keyword (s)
+    'airmass'              : 'AIRMASS', # airmass keyword
 
     # source extractor settings
     'source_minarea': 12,  # default sextractor source minimum N_pixels
@@ -543,29 +538,27 @@ lowell42_param = {
     'rotate': 90,
 
     # instrument-specific FITS header keywords
-    'binning': ('CCDSUM_blank1', 'CCDSUM_blank2'),
-    # binning in x/y, '_blankN' denotes that both axes
-    # are listed in one keyword, sep. by blanks
-    'extent': ('NAXIS1', 'NAXIS2'),  # N_pixels in x/y
-    'ra': 'TELRA',  # telescope pointing, RA
-    'dec': 'TELDEC',  # telescope pointin, Dec
-    'radec_separator': ':',  # RA/Dec hms separator, use 'XXX'
-    # if already in degrees
-    'date_keyword': 'DATE-OBS|UTC-OBS',  # obs date/time
-    # keyword; use
-    # 'date|time' if
-    # separate
-    'obsmidtime_jd': 'MIDTIMJD',  # obs midtime jd keyword
-    # (usually provided by
-    # pp_prepare
-    'object': 'OBJECT',  # object name keyword
-    'filter': 'FILTNAME',  # filter keyword
-    'filter_translations': {'V': 'V',
-                            'I': 'I',
-                            'VR': None},
-    # filtername translation dictionary
-    'exptime': 'EXPTIME',  # exposure time keyword (s)
-    'airmass': 'AIRMASS',  # airmass keyword
+    'binning'              : ('CCDSUM#blank1', 'CCDSUM#blank2'), 
+                           # binning in x/y, '_blankN' denotes that both axes
+                           # are listed in one keyword, sep. by blanks
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'TELRA',  # telescope pointing, RA
+    'dec'                  : 'TELDEC', # telescope pointin, Dec 
+    'radec_separator'      : ':',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'DATE-OBS|UTC-OBS', # obs date/time
+                                                  # keyword; use
+                                                  # 'date|time' if
+                                                  # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword 
+    'filter'               : 'FILTNAME',  # filter keyword
+    'filter_translations'  : {'V': 'V', 'I': 'I', 'VR': None},
+                             # filtername translation dictionary
+    'exptime'              : 'EXPTIME', # exposure time keyword (s)
+    'airmass'              : 'AIRMASS', # airmass keyword
 
     # source extractor settings
     'source_minarea': 12,  # default sextractor source minimum N_pixels
@@ -678,29 +671,27 @@ ctio09_param = {
     'rotate': 180,
 
     # instrument-specific FITS header keywords
-    'binning': ('CCDSUM_blank1', 'CCDSUM_blank2'),
-    # binning in x/y
-    'extent': ('NAXIS1', 'NAXIS2'),  # N_pixels in x/y
-    'ra': 'RA',  # telescope pointing, RA
-    'dec': 'DEC',  # telescope pointin, Dec
-    'radec_separator': ':',  # RA/Dec hms separator, use 'XXX'
-    # if already in degrees
-    'date_keyword': 'DATE-OBS',  # obs date/time
-    # keyword; use
-    # 'date|time' if
-    # separate
-    'obsmidtime_jd': 'MIDTIMJD',  # obs midtime jd keyword
-    # (usually provided by
-    # pp_prepare
-    'object': 'OBJECT',  # object name keyword
-    'filter': 'FILTERS',  # filter keyword
-    'filter_translations': {'dia v': 'V',
-                            'dia ov': 'V',
-                            'dia i': 'I',
-                            'dia r': 'R'},
-    # filtername translation dictionary
-    'exptime': 'EXPTIME',  # exposure time keyword (s)
-    'airmass': 'AIRMASS',  # airmass keyword
+    'binning'              : ('CCDSUM#blank1', 'CCDSUM#blank2'), 
+                             # binning in x/y
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'RA',  # telescope pointing, RA
+    'dec'                  : 'DEC', # telescope pointin, Dec 
+    'radec_separator'      : ':',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'DATE-OBS', # obs date/time
+                                                  # keyword; use
+                                                  # 'date|time' if
+                                                  # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword 
+    'filter'               : 'FILTERS',  # filter keyword
+    'filter_translations'  : {'dia v': 'V', 'dia ov': 'V','dia i': 'I',
+                              'dia r': 'R'},
+                             # filtername translation dictionary
+    'exptime'              : 'EXPTIME', # exposure time keyword (s)
+    'airmass'              : 'AIRMASS', # airmass keyword
 
     # source extractor settings
     'source_minarea': 15,  # default sextractor source minimum N_pixels
@@ -744,27 +735,26 @@ ctio10_param = {
     'rotate': 180,
 
     # instrument-specific FITS header keywords
-    'binning': ('CCDSUM_blank1', 'CCDSUM_blank2'),
-    # binning in x/y
-    'extent': ('NAXIS1', 'NAXIS2'),  # N_pixels in x/y
-    'ra': 'RA',  # telescope pointing, RA
-    'dec': 'DEC',  # telescope pointin, Dec
-    'radec_separator': ':',  # RA/Dec hms separator, use 'XXX'
-    # if already in degrees
-    'date_keyword': 'DATE-OBS|TIME-OBS',  # obs date/time
-    # keyword; use
-    # 'date|time' if
-    # separate
-    'obsmidtime_jd': 'MIDTIMJD',  # obs midtime jd keyword
-    # (usually provided by
-    # pp_prepare
-    'object': 'OBJECT',  # object name keyword
-    'filter': 'FILTERID',  # filter keyword
-    'filter_translations': {'V': 'V',
-                            'I': 'I'},
-    # filtername translation dictionary
-    'exptime': 'EXPTIME',  # exposure time keyword (s)
-    'airmass': 'AIRMASS',  # airmass keyword
+    'binning'              : ('CCDSUM#blank1', 'CCDSUM#blank2'), 
+                             # binning in x/y
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'RA',  # telescope pointing, RA
+    'dec'                  : 'DEC', # telescope pointin, Dec 
+    'radec_separator'      : ':',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'DATE-OBS|TIME-OBS', # obs date/time
+                                                  # keyword; use
+                                                  # 'date|time' if
+                                                  # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword 
+    'filter'               : 'FILTERID',  # filter keyword
+    'filter_translations'  : {'V': 'V', 'I': 'I'},
+                             # filtername translation dictionary
+    'exptime'              : 'EXPTIME', # exposure time keyword (s)
+    'airmass'              : 'AIRMASS', # airmass keyword
 
     # source extractor settings
     'source_minarea': 12,  # default sextractor source minimum N_pixels
@@ -1077,31 +1067,27 @@ ratir_param = {
     'rotate': 0,
 
     # instrument-specific FITS header keywords
-    'binning': ('SC_CH_DTBN', 'SC_CH_DTBN'),  # binning in x/y
-    # _CH_ gets replaced with Channel number
-    'extent': ('NAXIS1', 'NAXIS2'),  # N_pixels in x/y
-    'ra': 'STRSTRA',  # telescope pointing, RA
-    'dec': 'STRSTDE',  # telescope pointin, Dec
-    'radec_separator': 'XXX',  # RA/Dec hms separator, use 'XXX'
-    # if already in degrees
-    'date_keyword': 'SSHT',  # obs date/time
-    # keyword; use
-    # 'date|time' if
-    # separate
-    'obsmidtime_jd': 'MIDTIMJD',  # obs midtime jd keyword
-    # (usually provided by
-    # pp_prepare
-    'object': 'OBJECT',  # object name keyword
-    'filter': 'FILTER',  # filter keyword
-    'filter_translations': {'g': 'g',
-                            'r': 'r',
-                            'i': 'i',
-                            'z': 'z',
-                            'J': 'J',
-                            'H': 'H'},
-    # filtername translation dictionary
-    'exptime': 'EXPTIME',  # exposure time keyword (s)
-    'airmass': 'STROBAM',  # airmass keyword
+    'binning'              : ('SC#CH#DTBN', 'SC#CH#DTBN'), # binning in x/y
+                             # _CH_ gets replaced with Channel number
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'STRSTRA',  # telescope pointing, RA
+    'dec'                  : 'STRSTDE', # telescope pointin, Dec 
+    'radec_separator'      : 'XXX',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'SSHT', # obs date/time
+                                                  # keyword; use
+                                                  # 'date|time' if
+                                                  # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword 
+    'filter'               : 'FILTER',  # filter keyword
+    'filter_translations'  : {'g': 'g', 'r': 'r', 'i': 'i', 'z': 'z', 
+                              'J': 'J', 'H': 'H'},
+                             # filtername translation dictionary
+    'exptime'              : 'EXPTIME', # exposure time keyword (s)
+    'airmass'              : 'STROBAM', # airmass keyword
 
     # source extractor settings
     'source_minarea': 18,  # default sextractor source minimum N_pixels
@@ -1190,16 +1176,16 @@ ratir_param = {
 #     'photometry_catalogs'  : ['SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
 # }
 
-# SOAR, Goodman (imager)
+# SOAR, Goodman [old] (imager) 
 # running Goodman data requires the removal of header keywords
 # PARAM0, PARAM61, PARAM62, PARAM63 (degree symbol is non-ASCII)
-soargoodman_param = {
-    'telescope_instrument': 'SOAR/GOODMAN',  # telescope/instrument name
-    'telescope_keyword': 'SOARGOODMAN',  # telescope/instrument keyword
-    'observatory_code': 'I33',  # MPC observatory code
-    'secpix': (0.15, 0.15),  # pixel size (arcsec)
-    # before binning
-    'ext_coeff': 0.05,  # typical extinction coefficient
+soargoodmanold_param = {
+    'telescope_instrument' : 'SOAR/GOODMAN', # telescope/instrument name
+    'telescope_keyword'    : 'SOARGOODMAN',  # telescope/instrument keyword
+    'observatory_code'     : 'I33',         # MPC observatory code
+    'secpix'               : (0.15, 0.15), # pixel size (arcsec)
+                                               # before binning
+    'ext_coeff'            : 0.05,          # typical extinction coefficient
 
     # image orientation preferences
     'flipx': True,
@@ -1262,6 +1248,77 @@ soargoodman_param = {
     'astrometry_catalogs': ['GAIA'],
     'photometry_catalogs': ['SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
 }
+
+# SOAR, Goodman [new] (imager) 
+# running Goodman data requires the removal of header keywords
+# PARAM0, PARAM61, PARAM62, PARAM63 (degree symbol is non-ASCII)
+soargoodman_param = {
+    'telescope_instrument' : 'SOAR/GOODMAN', # telescope/instrument name
+    'telescope_keyword'    : 'SOARGOODMAN',  # telescope/instrument keyword
+    'observatory_code'     : 'I33',         # MPC observatory code
+    'secpix'               : (0.15, 0.15), # pixel size (arcsec)
+                                               # before binning
+    'ext_coeff'            : 0.05,          # typical extinction coefficient
+
+
+    # image orientation preferences
+    'flipx'                : True, 
+    'flipy'                : True, 
+    'rotate'               : 0, 
+
+    # instrument-specific FITS header keywords
+    'binning'              : ('PG5_9', 'PG5_4'), # binning in x/y
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'RA',  # telescope pointing, RA
+    'dec'                  : 'DEC', # telescope pointin, Dec 
+    'radec_separator'      : ':',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'DATE-OBS', # obs date/time
+                                                  # keyword; use
+                                                  # 'date|time' if
+                                                  # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword 
+    'filter'               : 'FILTER',  # filter keyword
+    'filter_translations'  : {'Rc': 'R', 'V':'V', 'B':'B', 'u':'u', 
+                              'g-SDSS': 'g', 'r-SDSS': 'r', 'i-SDSS': 'i', 
+                              'z-SDSS': 'z', 'VR': None},
+                             # filtername translation dictionary
+    'exptime'              : 'EXPTIME', # exposure time keyword (s)
+    'airmass'              : 'AIRMASS', # airmass keyword
+
+
+    # source extractor settings
+    'source_minarea'       : 15, # default sextractor source minimum N_pixels
+    'source_snr': 3, # default sextractor source snr for registration
+    'aprad_default'        : 4, # default aperture radius in px 
+    'aprad_range'          : [2, 10], # [minimum, maximum] aperture radius (px)
+    'sex-config-file'      : rootpath+'/setup/soargoodman.sex',
+    'mask_file'            : {'1,1' : rootpath+'/setup/mask_soargoodman_1x1.fits',
+                              '2,2' : rootpath+'/setup/mask_soargoodman_2x2.fits'},
+    #                        mask files as a function of x,y binning
+
+    # registration settings (Scamp)
+    'scamp-config-file'    : rootpath+'/setup/soargoodman.scamp', 
+    'reg_max_mag'          : 19,  
+    'reg_search_radius'    : 0.5, # deg       
+    'source_tolerance': 'high', 
+
+    # swarp settings
+    'copy_keywords'        : ('TELESCOP,INSTRUME,FILTER,EXPTIME,OBJECT,' +
+                              'DATE-OBS,RA,DEC,SECPIX,AIRMASS,PG5_9,PG5_4,' +
+                              'TEL_KEYW'),
+    #                        keywords to be copied in image
+    #                        combination using swarp
+    'swarp-config-file'    : rootpath+'/setup/soargoodman.swarp',  
+
+    # default catalog settings
+    'astrometry_catalogs'  : ['GAIA'], 
+    'photometry_catalogs'  : ['SDSS-R9', 'PANSTARRS', 'APASS9']
+}
+
 
 # Observatoire de Haute-Provence, 120cm, CCD
 ohp120_param = {
@@ -1890,6 +1947,215 @@ mexman_param = {
     'photometry_catalogs': ['SDSS-R9', 'APASS9', '2MASS']
 }
 
+# UKIRT, WFCAM
+ukirtwfcam_param = {
+    'telescope_instrument' : 'UKIRT/WFCAM', # telescope/instrument name
+    'telescope_keyword'    : 'UKIRTWFCAM',      # telescope/instrument keyword
+    'observatory_code'     : '568',         # MPC observatory code
+    'secpix'               : (0.402, 0.402), # pixel size (arcsec)
+                                               # before binning
+    'ext_coeff'            : 0.05,          # typical extinction coefficient
+
+
+    # # image orientation preferences
+    # 'flipx'                : False,
+    # 'flipy'                : False,
+    # 'rotate'               : 0,
+
+    # image orientation preferences (for each chip)
+    'chip_id'              : 'CAMNUM',        # chip identifier (remove,
+                                            # if not existent) 
+    # the following keys are dictionaries if 'chip_id' exists, single
+    # values otherwise
+    'flipx'                : {1:True, 2:True, 3:True, 4:True},
+    'flipy'                : {1:True, 2:True, 3:True, 4:True}, 
+    'rotate'               : {1:270, 2:0, 3:90, 4:180},
+    'chip_offset_fixed'    : {1:(-0.44, -0.44), 2:(0,-0.44),
+                              3:(0,0), 4:(-0.440,0)},
+                             # chip offset (ra, dec in degress) [optional]
+
+    
+    # instrument-specific FITS header keywords
+    'binning'              : (1, 1), # binning in x/y
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'TELRA',  # telescope pointing, RA
+    'dec'                  : 'TELDEC', # telescope pointin, Dec 
+    'radec_separator'      : 'XXX',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'DATE-OBS', # obs date/time
+                                                  # keyword; use
+                                                  # 'date|time' if
+                                                  # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword 
+    'filter'               : 'FILTER',  # filter keyword
+    'filter_translations'  : {'J': 'J', 'Z': 'Z', 
+                              'H': 'H', 'K': 'K'},
+                             # filtername translation dictionary
+    'exptime'              : 'EXP_TIME', # exposure time keyword (s)
+    'airmass'              : 'AMSTART', # airmass keyword
+
+    # source extractor settings
+    'source_minarea'       : 12, # default sextractor source minimum N_pixels
+    'source_snr': 3, # default sextractor source snr for registration
+    'aprad_default'        : 5, # default aperture radius in px 
+    'aprad_range'          : [1, 8], # [minimum, maximum] aperture radius (px)
+    'sex-config-file'      : rootpath+'/setup/ukirtwfcam.sex',
+    'mask_file'            : {},
+    #                        mask files as a function of x,y binning
+
+    # registration settings (Scamp)
+    'scamp-config-file'    : rootpath+'/setup/ukirtwfcam.scamp', 
+    'reg_max_mag'          : 19,  
+    'reg_search_radius'    : 0.05, # deg       
+    'source_tolerance': 'high', 
+    
+    # swarp settings
+    'copy_keywords'        : ('TELESCOP,INSTRUME,FILTER,EXP_TIME,PROJECT,'+
+                              'AIRMASS,OBJECT,DATE-OBS,MJD-OBS,GAIN,'+
+                              'READNOIS,TELRA,TELDEC,SECPIX1,SECPIX2,'+
+                              'MIDTIMJD,TEL_KEYW'),
+    #                         keywords to be copied in image
+    #                         combination using swarp
+    'swarp-config-file'    : rootpath+'/setup/ukirtwfcam.swarp',  
+
+    # default catalog settings
+    'astrometry_catalogs'  : ['GAIA'], 
+    'photometry_catalogs'  : ['2MASS']
+}
+
+# IRSF 1.4m, SIRIUS
+irsfsirius_param = {
+    'telescope_instrument' : 'IRSF/SIRIUS', # telescope/instrument name
+    'telescope_keyword'    : 'IRSFSIRIUS',      # telescope/instrument keyword
+    'observatory_code'     : 'K94',         # MPC observatory code
+    'secpix'               : (0.453, 0.453), # pixel size (arcsec)
+                                               # before binning
+    'ext_coeff'            : 0.05,          # typical extinction coefficient
+
+
+    # image orientation preferences
+    'flipx'                : True,
+    'flipy'                : False,
+    'rotate'               : 0,
+
+    # instrument-specific FITS header keywords
+    'binning'              : (1, 1), # binning in x/y
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'RA',  # telescope pointing, RA
+    'dec'                  : 'DEC', # telescope pointin, Dec 
+    'radec_separator'      : ':',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'DATE_UTC|TIME_UTC', # obs date/time
+                                                  # keyword; use
+                                                  # 'date|time' if
+                                                  # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword 
+    'filter'               : 'FILTER',  # filter keyword
+    'filter_translations'  : {'J': 'J', 'H': 'H', 'Ks': 'Ks'},
+                             # filtername translation dictionary
+    'exptime'              : 'EXPOS', # exposure time keyword (s)
+    'airmass'              : 'AIRMASS', # airmass keyword
+
+
+    # source extractor settings
+    'source_minarea'       : 12, # default sextractor source minimum N_pixels
+    'source_snr': 3, # default sextractor source snr for registration
+    'aprad_default'        : 5, # default aperture radius in px 
+    'aprad_range'          : [2, 10], # [minimum, maximum] aperture radius (px)
+    'sex-config-file'      : rootpath+'/setup/irsfsirius.sex',
+    'mask_file'            : {},
+    #                        mask files as a function of x,y binning
+
+    # registration settings (Scamp)
+    'scamp-config-file'    : rootpath+'/setup/irsfsirius.scamp', 
+    'reg_max_mag'          : 19,  
+    'reg_search_radius'    : 0.5, # deg       
+    'source_tolerance': 'high', 
+    
+    # swarp settings
+    'copy_keywords'        : ('TELESCOP,INSTRUME,FILTER,EXPTIME,OBJECT,' +
+                              'DATE-OBS,TIME-OBS,RA,DEC,SECPIX,AIRMASS,' +
+                              'TEL_KEYW'),
+    #                         keywords to be copied in image
+    #                         combination using swarp
+    'swarp-config-file'    : rootpath+'/setup/vatt4k.swarp',  
+
+    # default catalog settings
+    'astrometry_catalogs'  : ['GAIA'], 
+    'photometry_catalogs'  : ['2MASS']
+}
+
+# VLT, FORS2
+vltfors2_param = {
+    'telescope_instrument' : 'VLT/FORS2', # telescope/instrument name
+    'telescope_keyword'    : 'VLTFORS2',  # telescope/instrument keyword
+    'observatory_code'     : '309',         # MPC observatory code
+    'secpix'               : (0.126, 0.126), # pixel size (arcsec)
+                                            # before binning
+    'ext_coeff'            : 0.05,          # typical extinction coefficient
+
+
+    # image orientation preferences
+    'flipx'                : True, 
+    'flipy'                : False, 
+    'rotate'               : 0, 
+
+    # instrument-specific FITS header keywords
+    'binning'              : ('ESO DET WIN1 BINX', 'ESO DET WIN1 BINY'), 
+                           # binning in x/y, '_blankN' denotes that both axes
+                           # are listed in one keyword, sep. by blanks
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'RA',  # telescope pointing, RA
+    'dec'                  : 'DEC', # telescope pointin, Dec 
+    'radec_separator'      : 'XXX',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'DATE-OBS', # obs date/time
+                                         # keyword; use
+                                         # 'date|time' if
+                                         # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword 
+    'filter'               : 'ESO INS FILT1 NAME',  # filter keyword
+    'filter_translations'  : {'R_SPECIAL': 'R'},
+                             # filtername translation dictionary
+    'exptime'              : 'EXPTIME', # exposure time keyword (s)
+    'airmass'              : 'AIRMASS', # airmass keyword
+
+
+    # source extractor settings
+    'source_minarea'       : 9, # default sextractor source minimum N_pixels
+    'source_snr': 10, # default sextractor source snr for registration
+    'aprad_default'        : 4, # default aperture radius in px 
+    'aprad_range'          : [2, 20], # [minimum, maximum] aperture radius (px)
+    'sex-config-file'      : rootpath+'/setup/vltfors2.sex',
+    'mask_file'            : {},
+    #                        mask files as a function of x,y binning
+
+    # registration settings (Scamp)
+    'scamp-config-file'    : rootpath+'/setup/vltfors2.scamp', 
+    'reg_max_mag'          : 21,  
+    'reg_search_radius'    : 0.3, # deg       
+    'source_tolerance': 'high', 
+
+    # swarp settings
+    'copy_keywords'        : ('OBSERVAT,INSTRUME,ESO INS FILT1 NAME,EXPTIME,' +
+                              'OBJECT,DATE-OBS,RA,DEC,SCALE,AIRMASS,TEL_KEYW'),
+    #                        keywords to be copied in image
+    #                        combination using swarp
+    'swarp-config-file'    : rootpath+'/setup/vltfors2.swarp',  
+
+    # default catalog settings
+    'astrometry_catalogs'  : ['GAIA'], 
+    'photometry_catalogs'  : ['SDSS-R9', 'PANSTARRS', 'APASS9']
+}
 
 
 ##### access functions for telescope configurations
@@ -1943,7 +2209,7 @@ instrument_identifiers = {'= "Vatt4k"': 'VATT4K',
                           'C3': 'RATIR',
                           'C4': 'RATIR',
                           #'SHA':               'SL74SHA',
-                          'Goodman Spectrograph': 'SOARGOODMAN',
+                          'Goodman Spectrograph': 'SOARGOODMANold',
                           'Andor Tech':        'OHP120',
                           'LRS':               'TNGDOLORES',
                           'mosaic_1_1':        'KPNO4MOS1',
@@ -1951,7 +2217,12 @@ instrument_identifiers = {'= "Vatt4k"': 'VATT4K',
                           'KMTS':              'KMTNETS',
                           'SI Model 620 SN 263': 'FROST',
                           'newfirm': 'KPNO4NEWF',
-                          'Mosaic3': 'KPNO4MOS3'}
+                          'Mosaic3': 'KPNO4MOS3',
+                          'WFCAM': 'UKIRTWFCAM',
+                          'SIRIUS': 'IRSFSIRIUS',
+                          'Goodman Spectro': 'SOARGOODMAN',
+                          'FORS2': 'VLTFORS2'
+}
 
 # translate telescope keyword into parameter set defined here
 telescope_parameters = {'VATT4K': vatt4k_param,
@@ -1971,14 +2242,19 @@ telescope_parameters = {'VATT4K': vatt4k_param,
                         'GENERIC': generic_param,
                         'RATIR': ratir_param,
                         #'SL74SHA':       sl74sha_param,
-                        'SOARGOODMAN':   soargoodman_param,
+                        'SOARGOODMANold': soargoodmanold_param,
+                        'SOARGOODMAN': soargoodman_param,
                         'OHP120':        ohp120_param,
                         'TNGDOLORES':    tngdolores_param,
                         'KPNO4MOS1':     kpno4mos1_param,
                         'KMTNETS':       kmtnets_param,
                         'FROST':         frost_param,
                         'KPNO4MOS3': kpno4mos3_param,
-                        'KPNO4NEWF': kpno4newf_param}
+                        'KPNO4NEWF': kpno4newf_param,
+                        'UKIRTWFCAM': ukirtwfcam_param,
+                        'IRSFSIRIUS': irsfsirius_param,
+                        'VLTFORS2': vltfors2_param
+}
 
 #### append mytelescopes.py, if available
 #

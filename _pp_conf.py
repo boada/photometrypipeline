@@ -16,6 +16,7 @@ try:
 except ImportError:
     print('Module astropy not found. Please install with: pip install astropy')
     sys.exit()
+
 try:
     import numpy as np
 except ImportError:
@@ -161,8 +162,13 @@ fluxmargin_aprad = 0.05
 # photometric calibration
 minstars = 0.5
 
-# support
+# solar color margin
+# solar color filtering allows for color indices
+# [color-_pp_conf.solcol -- color+_pp_conf.solcol]
+solcol = 0.2
 
-# path to local variable star database file
-# make sure set this variable accordingly if you want to use the catalog
-vsx_database_file = os.environ.get('PPVARSTARSDB')
+
+# photometry flavor ['APER', 'ISOCOR', 'AUTO']
+photmode = 'APER'
+## don't change this unless you understand what you are doing
+

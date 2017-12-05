@@ -4,8 +4,7 @@ CATALOG - class structure for dealing with astronomical catalogs,
 
 version 0.9, 2016-01-27, michael.mommert@nau.edu
 """
-from __future__ import print_function
-from __future__ import division
+from __future__ import print_function, division
 
 # Photometry Pipeline
 # Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
@@ -261,7 +260,7 @@ class catalog(object):
                                       'outputformat': 'VOTABLE',
                                       'coordformat': 'FLOAT',
                                       'ndetections': ('>%d' % max_mag)},
-                             timeout=180)
+                             timeout=300)
 
             # write query data into local file
             outf = open('panstarrs.xml', 'w')
@@ -278,47 +277,19 @@ class catalog(object):
             self.data.rename_column('decMean', 'dec.deg')
             self.data.rename_column('raMeanErr', 'e_ra.deg')
             self.data.rename_column('decMeanErr', 'e_dec.deg')
-            self.data.rename_column('gMeanPSFMag', 'gmag')
-            self.data.rename_column('gMeanPSFMagErr', 'e_gmag')
-            self.data.rename_column('rMeanPSFMag', 'rmag')
-            self.data.rename_column('rMeanPSFMagErr', 'e_rmag')
-            self.data.rename_column('iMeanPSFMag', 'imag')
-            self.data.rename_column('iMeanPSFMagErr', 'e_imag')
-            self.data.rename_column('zMeanPSFMag', 'zmag')
-            self.data.rename_column('zMeanPSFMagErr', 'e_zmag')
-            self.data.rename_column('yMeanPSFMag', 'ymag')
-            self.data.rename_column('yMeanPSFMagErr', 'e_ymag')
+            self.data.rename_column('gMeanPSFMag', 'gp1mag')
+            self.data.rename_column('gMeanPSFMagErr', 'e_gp1mag')
+            self.data.rename_column('rMeanPSFMag', 'rp1mag')
+            self.data.rename_column('rMeanPSFMagErr', 'e_rp1mag')
+            self.data.rename_column('iMeanPSFMag', 'ip1mag')
+            self.data.rename_column('iMeanPSFMagErr', 'e_ip1mag')
+            self.data.rename_column('zMeanPSFMag', 'zp1mag')
+            self.data.rename_column('zMeanPSFMagErr', 'e_zp1mag')
+            self.data.rename_column('yMeanPSFMag', 'yp1mag')
+            self.data.rename_column('yMeanPSFMagErr', 'e_yp1mag')
 
             # clip self.data to enforce magnitude error limits
-            self.data = self.data[self.data['e_rmag'] <= 0.03]
-
-            # transform magnitudes to SDSS AB system
-            # using Tonry et al. 2012, ApJ 750
-            g_sdss = (self.data['gmag'] + 0.013 +
-                      0.145*(self.data['gmag']-self.data['rmag']) +
-                      0.019*(self.data['gmag']-self.data['rmag'])**2)
-            gerr_sdss = numpy.sqrt(self.data['e_gmag']**2 + 0.008**2)
-            r_sdss = (self.data['rmag'] - 0.001 +
-                      0.004*(self.data['gmag']-self.data['rmag']) +
-                      0.007*(self.data['gmag']-self.data['rmag'])**2)
-            rerr_sdss = numpy.sqrt(self.data['e_rmag']**2 + 0.004**2)
-            i_sdss = (self.data['imag'] - 0.005 +
-                      0.011*(self.data['gmag']-self.data['rmag']) +
-                      0.010*(self.data['gmag']-self.data['rmag'])**2)
-            ierr_sdss = numpy.sqrt(self.data['e_imag']**2 + 0.004**2)
-            z_sdss = (self.data['rmag'] + 0.013 -
-                      0.039*(self.data['gmag']-self.data['rmag']) -
-                      0.012*(self.data['gmag']-self.data['rmag'])**2)
-            zerr_sdss = numpy.sqrt(self.data['e_zmag']**2 + 0.01**2)
-
-            self.data['gmag'] = g_sdss
-            self.data['e_gmag'] = gerr_sdss
-            self.data['rmag'] = r_sdss
-            self.data['e_rmag'] = rerr_sdss
-            self.data['imag'] = i_sdss
-            self.data['e_imag'] = ierr_sdss
-            self.data['zmag'] = z_sdss
-            self.data['e_zmag'] = zerr_sdss
+            self.data = self.data[self.data['e_rp1mag'] <= 0.03]
 
 
         # --------------------------------------------------------------------
@@ -421,7 +392,7 @@ class catalog(object):
                     print('no data available from %s' % self.catalogname)
                 logging.error('no data available from %s' % self.catalogname)
                 return 0
-
+     
             # filter columns to only have really good detections
             # see the Vizier webpage for a description of what the flags mean
             Qflags = set('ABC') # only A, B, or C flagged detections
@@ -440,6 +411,8 @@ class catalog(object):
             self.data.rename_column('_2MASS', 'ident')
             self.data.rename_column('RAJ2000', 'ra.deg')
             self.data.rename_column('DEJ2000', 'dec.deg')
+            self.data.rename_column('Kmag', 'Ksmag')
+            self.data.rename_column('e_Kmag', 'e_Ksmag')                        
             self.data['mag'] = self.data['Jmag'] # use J as default mag
 
             ### determine RA and Dec positional uncertainties and
@@ -981,10 +954,9 @@ class catalog(object):
             return 0
 
         ### SDSS to BVRI
-        ### transformations based on Chonis & Gaskell 2008, AJ, 135
-        if (('SDSS' in self.catalogname) and
-            (targetfilter in {'B', 'V', 'R', 'I'}) and
-            (self.magsystem == 'AB')):
+        ### transformations based on Chonis & Gaskell 2008, AJ, 135 
+        if (('SDSS' in self.catalogname) and 
+            (targetfilter in {'B', 'V', 'R', 'I'})):
 
             logging.info(('trying to transform %d SDSS sources to ' \
                           + '%s') % (self.shape[0], targetfilter))
@@ -1162,11 +1134,11 @@ class catalog(object):
                           +'UKIRT YZJHK') % self.shape[0])
 
             # transformations using the recipe by Hodgkin et al. 2009, MNRAS
-            mags  = [self['Jmag'], self['Hmag'], self['Kmag'],
-                     self['e_Jmag'], self['e_Hmag'],
-                     self['e_Kmag']]
-            lbl   = {'_Ymag': 0, '_e_Ymag': 1, '_Zmag': 2, '_e_Zmag': 3,
-                     '_Jmag': 4, '_e_Jmag': 5, '_Hmag': 6, '_e_Hmag': 7,
+            mags  = [self['Jmag'], self['Hmag'], self['Ksmag'],
+                     self['e_Jmag'], self['e_Hmag'], 
+                     self['e_Ksmag']]
+            lbl   = {'_Ymag': 0, '_e_Ymag': 1, '_Zmag': 2, '_e_Zmag': 3, 
+                     '_Jmag': 4, '_e_Jmag': 5, '_Hmag': 6, '_e_Hmag': 7, 
                      '_Kmag': 8, '_e_Kmag': 9}
             nmags = [numpy.zeros(self.shape[0]) for i in range(len(lbl))]
 
@@ -1233,40 +1205,43 @@ class catalog(object):
             return self.shape[0]
 
         # PANSTARRS to BVRI
-        elif (self.catalogname == 'PANSTARRS' and
-              targetfilter in ['B', 'V', 'R', 'I'] and
-              self.magsystem == 'AB'):
+        elif ('PANSTARRS' in self.catalogname and
+              targetfilter in ['B', 'V', 'R', 'I']):
 
             logging.info(('trying to transform %d PANSTARRS sources to ' \
                           + '%s') % (self.shape[0], targetfilter))
 
             # transform magnitudes to BVRI, Vega system
             # using Tonry et al. 2012, ApJ 750
-            B = (self.data['gmag'] + 0.212 +
-                      0.556*(self.data['gmag']-self.data['rmag']) +
-                      0.034*(self.data['gmag']-self.data['rmag'])**2)
-            Berr = numpy.sqrt(self.data['e_gmag']**2 + 0.032**2)
-            V = (self.data['gmag'] + 0.005 -
-                 0.536*(self.data['gmag']-self.data['rmag']) +
-                 0.011*(self.data['gmag']-self.data['rmag'])**2)
-            Verr = numpy.sqrt(self.data['e_gmag']**2 + 0.012**2)
-            R = (self.data['rmag'] - 0.137 -
-                      0.108*(self.data['gmag']-self.data['rmag']) -
-                      0.029*(self.data['gmag']-self.data['rmag'])**2)
-            Rerr = numpy.sqrt(self.data['e_rmag']**2 + 0.015**2)
-            I = (self.data['imag'] - 0.366 -
-                      0.136*(self.data['gmag']-self.data['rmag']) -
-                      0.018*(self.data['gmag']-self.data['rmag'])**2)
-            Ierr = numpy.sqrt(self.data['e_imag']**2 + 0.017**2)
+            B = (self.data['gp1mag'] + 0.212 +
+                      0.556*(self.data['gp1mag']-self.data['rp1mag']) +
+                      0.034*(self.data['gp1mag']-self.data['rp1mag'])**2)
+            Berr = numpy.sqrt(self.data['e_gp1mag']**2 + 0.032**2)
+            V = (self.data['gp1mag'] + 0.005 -
+                 0.536*(self.data['gp1mag']-self.data['rp1mag']) +
+                 0.011*(self.data['gp1mag']-self.data['rp1mag'])**2)
+            Verr = numpy.sqrt(self.data['e_gp1mag']**2 + 0.012**2)
+            R = (self.data['rp1mag'] - 0.137 -
+                      0.108*(self.data['gp1mag']-self.data['rp1mag']) -
+                      0.029*(self.data['gp1mag']-self.data['rp1mag'])**2)
+            Rerr = numpy.sqrt(self.data['e_rp1mag']**2 + 0.015**2)
+            I = (self.data['ip1mag'] - 0.366 -
+                      0.136*(self.data['gp1mag']-self.data['rp1mag']) -
+                      0.018*(self.data['gp1mag']-self.data['rp1mag'])**2)
+            Ierr = numpy.sqrt(self.data['e_ip1mag']**2 + 0.017**2)
 
             self.data.add_column(Column(data=B, name='_Bmag', unit=u.mag))
-            self.data.add_column(Column(data=Berr, name='_e_Bmag', unit=u.mag))
+            self.data.add_column(Column(data=Berr, name='_e_Bmag',
+                                        unit=u.mag))
             self.data.add_column(Column(data=V, name='_Vmag', unit=u.mag))
-            self.data.add_column(Column(data=Verr, name='_e_Vmag', unit=u.mag))
+            self.data.add_column(Column(data=Verr, name='_e_Vmag',
+                                        unit=u.mag))
             self.data.add_column(Column(data=R, name='_Rmag', unit=u.mag))
-            self.data.add_column(Column(data=Rerr, name='_e_Rmag', unit=u.mag))
+            self.data.add_column(Column(data=Rerr, name='_e_Rmag',
+                                        unit=u.mag))
             self.data.add_column(Column(data=I, name='_Imag', unit=u.mag))
-            self.data.add_column(Column(data=Ierr, name='_e_Imag', unit=u.mag))
+            self.data.add_column(Column(data=Ierr, name='_e_Imag',
+                                        unit=u.mag))
 
             self.catalogname  += '_transformed'
             self.history += ', %d transformed to %s (Vega)' % \
@@ -1278,6 +1253,57 @@ class catalog(object):
 
             return self.shape[0]
 
+        # PANSTARRS to Sloan griz
+        elif ('PANSTARRS' in self.catalogname and
+              targetfilter in ['g', 'r', 'i', 'z']):
+
+            logging.info(('trying to transform %d PANSTARRS sources to ' \
+                          + '%s') % (self.shape[0], targetfilter))
+
+            # transform magnitudes to BVRI, Vega system
+            # using Tonry et al. 2012, ApJ 750
+            # transform magnitudes to SDSS AB system
+            # using Tonry et al. 2012, ApJ 750
+            g_sdss = (self.data['gp1mag'] + 0.013 +
+                      0.145*(self.data['gp1mag']-self.data['rp1mag']) +
+                      0.019*(self.data['gp1mag']-self.data['rp1mag'])**2)
+            gerr_sdss = numpy.sqrt(self.data['e_gp1mag']**2 + 0.008**2)
+            r_sdss = (self.data['rp1mag'] - 0.001 +
+                      0.004*(self.data['gp1mag']-self.data['rp1mag']) +
+                      0.007*(self.data['gp1mag']-self.data['rp1mag'])**2)
+            rerr_sdss = numpy.sqrt(self.data['e_rp1mag']**2 + 0.004**2)
+            i_sdss = (self.data['ip1mag'] - 0.005 +
+                      0.011*(self.data['gp1mag']-self.data['rp1mag']) +
+                      0.010*(self.data['gp1mag']-self.data['rp1mag'])**2)
+            ierr_sdss = numpy.sqrt(self.data['e_ip1mag']**2 + 0.004**2)
+            z_sdss = (self.data['rp1mag'] + 0.013 -
+                      0.039*(self.data['gp1mag']-self.data['rp1mag']) -
+                      0.012*(self.data['gp1mag']-self.data['rp1mag'])**2)
+            zerr_sdss = numpy.sqrt(self.data['e_zp1mag']**2 + 0.01**2)
+
+            self.data.add_column(Column(data=g_sdss, name='_gmag', unit=u.mag))
+            self.data.add_column(Column(data=gerr_sdss, name='_e_gmag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=r_sdss, name='_rmag', unit=u.mag))
+            self.data.add_column(Column(data=rerr_sdss, name='_e_rmag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=i_sdss, name='_imag', unit=u.mag))
+            self.data.add_column(Column(data=ierr_sdss, name='_e_imag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=z_sdss, name='_zmag', unit=u.mag))
+            self.data.add_column(Column(data=zerr_sdss, name='_e_zmag',
+                                        unit=u.mag))
+
+            self.catalogname  += '_transformed'
+            self.history += ', %d transformed to %s (AB)' % \
+                            (self.shape[0], targetfilter)
+            self.magsystem = 'AB'
+
+            logging.info('%d sources sucessfully transformed to %s' % \
+                         (self.shape[0], targetfilter))
+
+            return self.shape[0]
+       
 
         # ### 2MASS to Warner BVRI (not accounting for galactic extinction)
         # elif (self.catalogname == '2MASS') and \

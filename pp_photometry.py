@@ -34,6 +34,7 @@ import subprocess
 import logging
 import argparse
 import time
+from copy import deepcopy
 from astropy.io import fits
 import matplotlib
 matplotlib.use('Agg')
@@ -172,13 +173,15 @@ def curve_of_growth_analysis(filenames, parameters,
                                 (filename, targetname,
                                  residuals[numpy.argmin(residuals)]*3600.))
             else:
-                target_flux.append(old_div(data[target_idx]['FLUX_APER'],
-                                   max(data[target_idx]['FLUX_APER'])))
+                target_flux.append(old_div(data[target_idx]['FLUX_'+
+                                                            _pp_conf.photmode],
+                                   max(data[target_idx]['FLUX_'+
+                                                        _pp_conf.photmode])))
                 target_snr.append(
-                    data[target_idx]['FLUX_APER']/\
-                    data[target_idx]['FLUXERR_APER']/ \
-                    max(old_div(data[target_idx]['FLUX_APER'], \
-                        data[target_idx]['FLUXERR_APER'])))
+                    data[target_idx]['FLUX_'+_pp_conf.photmode]/\
+                    data[target_idx]['FLUXERR_'+_pp_conf.photmode]/ \
+                    max(old_div(data[target_idx]['FLUX_'+_pp_conf.photmode], \
+                        data[target_idx]['FLUXERR_'+_pp_conf.photmode])))
                 n_target_identified += 1
 
         ### extract background source fluxes and snrs
@@ -187,18 +190,19 @@ def curve_of_growth_analysis(filenames, parameters,
             #n_src = data.shape[0] # use all sources
             n_src = 50 # use only 50 sources
             for idx, src in enumerate(data.data[:n_src]):
-                if (numpy.any(numpy.isnan(src['FLUX_APER'])) or
-                    numpy.any(numpy.isnan(src['FLUXERR_APER'])) or
+                if (numpy.any(numpy.isnan(src['FLUX_'+_pp_conf.photmode])) or
+                    numpy.any(numpy.isnan(src['FLUXERR_'+_pp_conf.photmode])) or
                     src['FLAGS'] > 3):
                     continue
 
                 # create growth curve
-                background_flux.append(old_div(src['FLUX_APER'],\
-                                       max(src['FLUX_APER'])))
-                background_snr.append(src['FLUX_APER']/\
-                                      src['FLUXERR_APER']/\
-                                      max(old_div(src['FLUX_APER'],\
-                                          src['FLUXERR_APER'])))
+                background_flux.append(old_div(src['FLUX_'+_pp_conf.photmode],\
+                                       max(src['FLUX_'+_pp_conf.photmode])))
+                background_snr.append(src['FLUX_'+_pp_conf.photmode]/\
+                                      src['FLUXERR_'+_pp_conf.photmode]/\
+                                      max(old_div(src['FLUX_'+
+                                                      _pp_conf.photmode],\
+                                          src['FLUXERR_'+_pp_conf.photmode])))
 
 
     ###### investigate curve-of-growth
@@ -333,9 +337,9 @@ def curve_of_growth_analysis(filenames, parameters,
 
     ##### display results
     if display:
-        print('\n########################## APERTURE CORRECTION SUMMARY:\n###')
+        print('\n#################################### PHOTOMETRY SUMMARY:\n###')
         print('### best-fit aperture radius %5.2f (px)' % (optimum_aprad))
-        print('###\n######################################################\n')
+        print('###\n#####################################################\n')
 
     logging.info('==> best-fit aperture radius: %3.1f (px)'  % (optimum_aprad))
 
@@ -361,36 +365,61 @@ def photometry(filenames, sex_snr, source_minarea, aprad,
                'quiet'           : not display}
 
     ### do curve-of-growth analysis if aprad not provided
-    if aprad is None:
+    for filename in filenames:
+        hdu = fits.open(filename, mode='update',
+                        ignore_missing_end=True)
+        hdu[0].header['PHOTMODE'] = (_pp_conf.photmode,
+                                      'PP photometry mode')
+        hdu.flush()
+        hdu.close()
 
-        # aperture radius list
-        aprads = numpy.linspace(obsparam['aprad_range'][0],
-                                obsparam['aprad_range'][1], 20)
+    if _pp_conf.photmode == 'APER':
+        if aprad is None:
+            # aperture radius list
+            aprads = numpy.linspace(obsparam['aprad_range'][0],
+                                    obsparam['aprad_range'][1], 20)
+            
+            photpar['aprad'] = aprads
+            cog = curve_of_growth_analysis(filenames, photpar,
+                                           display=display,
+                                           diagnostics=diagnostics)
+            aprad = cog['optimum_aprad']
+        else:
+            ## add manually selected aprad to image headers
+            for filename in filenames:
+                hdu = fits.open(filename, mode='update',
+                                ignore_missing_end=True)
+                hdu[0].header['APRAD'] = (aprad,
+                                          'manual aperture phot radius (px)')
+                hdu.flush()
+                hdu.close()
 
-        photpar['aprad'] = aprads
-        cog = curve_of_growth_analysis(filenames, photpar,
-                                       display=display,
-                                       diagnostics=diagnostics)
-        aprad = cog['optimum_aprad']
+        # run extract using (optimum) aprad
+        photpar['aprad'] = round(aprad, 2)
+        photpar['paramfile'] = (_pp_conf.rootpath+
+                                '/setup/singleaperture.sexparam')
+        logging.info('extract sources using optimum aperture from %d images' % \
+                     len(filenames))
+        
+        if display:
+            print(('* extract sources from %d images using aperture ' \
+                   + 'radius %4.2fpx') % \
+                  (len(filenames), aprad))
     else:
-        ## add manually selected aprad to image headers
-        for filename in filenames:
-            hdu = fits.open(filename, mode='update', ignore_missing_end=True)
-            hdu[0].header['APRAD'] = (aprad,
-                                      'manual aperture phot radius (px)')
-            hdu.flush()
-            hdu.close()
+        photpar['aprad'] = None
+        photpar['paramfile'] = (_pp_conf.rootpath+
+                                '/setup/singleaperture.sexparam')
 
-    # run extract using (optimum) aprad
-    photpar['aprad'] = aprad
-    photpar['paramfile'] = _pp_conf.rootpath+'/setup/singleaperture.sexparam'
-    logging.info('extract sources using optimum aperture from %d images' % \
-                 len(filenames))
-    if display:
-        print(('* extract sources from %d images using aperture ' \
-               + 'radius %4.2fpx') % \
-            (len(filenames), aprad))
+        logging.info('extract sources using ' + _pp_conf.photmode +
+                     ' photometry')
 
+        if display:
+            print(('* extract sources from %d images using ' \
+                   + _pp_conf.photmode + ' photometry') % \
+                  len(filenames))
+
+    photpar['photmode'] = _pp_conf.photmode
+            
     pp_extract.extract_multiframe(filenames, photpar)
 
 

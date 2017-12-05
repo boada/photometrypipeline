@@ -30,7 +30,7 @@ import subprocess
 import logging
 import argparse, shlex
 import time, datetime
-import queue, threading
+from multiprocessing import Pool
 import logging
 from astropy.io import fits
 
@@ -66,12 +66,6 @@ logging.basicConfig(filename = _pp_conf.log_filename,
 
 version = '1.0'
 
-# threading definitions
-nThreads = 10
-extractQueue = queue.Queue(2000)
-threadLock = threading.Lock()
-
-
 # Determine the Source Extractor executable name: sex or sextractor.
 for cmd in ['sex', 'sextractor']:
     try:
@@ -87,181 +81,132 @@ del cmd
 
 ##### extractor class definition
 
-class extractor(threading.Thread):
+def extract_singleframe(data):
     """
-    call Source Extractor using threading
+    call Source Extractor using multiprocessing
     """
-    def __init__(self, par, output):
-        self.param      = par
-        self.output     = output
-        threading.Thread.__init__(self)
-    def run(self):
-        while True:
-            try:
-                filename = extractQueue.get(True,1)
-            except:
-                break           # No more jobs in the queue
 
-            # add output dictionary
-            out = {}
-            threadLock.acquire()
-            self.output.append(out)
-            threadLock.release()
+    param = data[0]
+    filename = data[1]
 
+    out = {}
+    
+    ### process this frame
+    ldacname = filename[:filename.find('.fit')]+'.ldac'
+    out['fits_filename'] = filename
+    out['ldac_filename'] = ldacname
+    out['parameters']    = param
 
-            ### process this frame
-            ldacname = filename[:filename.find('.fit')]+'.ldac'
-            out['fits_filename'] = filename
-            out['ldac_filename'] = ldacname
-            out['parameters']    = self.param
+    # prepare running SEXTRACTOR
+    os.remove(ldacname) if os.path.exists(ldacname) else None
 
+    optionstring = ''
+    if _pp_conf.photmode == 'APER':
+        optionstring  += ' -PHOT_APERTURES %s ' % \
+                        param['aperture_diam']
+    if ('global_background' in param and 
+        param['global_background']):
+        optionstring += ' -BACKPHOTO_TYPE GLOBAL '
+    else:
+        optionstring += ' -BACKPHOTO_TYPE LOCAL '
+    optionstring += ' -DETECT_MINAREA %f ' % param['source_minarea']
+    optionstring += ' -DETECT_THRESH %f -ANALYSIS_THRESH %f ' % \
+                    (param['sex_snr'], param['sex_snr'])
+    optionstring += ' -CATALOG_NAME %s ' % ldacname
 
-            # prepare running SEXTRACTOR
-            threadLock.acquire()
-            os.remove(ldacname) if os.path.exists(ldacname) else None
-            threadLock.release()
-            optionstring  = ' -PHOT_APERTURES %s ' % \
-                            self.param['aperture_diam']
-            if ('global_background' in self.param and 
-                self.param['global_background']):
-                optionstring += ' -BACKPHOTO_TYPE GLOBAL '
-            else:
-                optionstring += ' -BACKPHOTO_TYPE LOCAL '
-            optionstring += ' -DETECT_MINAREA %f ' % \
-                            self.param['source_minarea']
-            optionstring += ' -DETECT_THRESH %f -ANALYSIS_THRESH %f ' % \
-                        (self.param['sex_snr'], self.param['sex_snr'])
-            optionstring += ' -CATALOG_NAME %s ' % ldacname
+    if 'mask_file' in param:
+        optionstring += ' -WEIGHT_TYPE MAP_WEIGHT'
+        optionstring += ' -WEIGHT_IMAGE %s' % param['mask_file']
 
-            if 'mask_file' in self.param:
-                optionstring += ' -WEIGHT_TYPE MAP_WEIGHT'
-                optionstring += ' -WEIGHT_IMAGE %s' %\
-                                self.param['mask_file']
+    if 'paramfile' in param:
+        optionstring += ' -PARAMETERS_NAME %s' % param['paramfile']
 
-            if 'paramfile' in self.param:
-                optionstring += ' -PARAMETERS_NAME %s' % \
-                                self.param['paramfile']
+    if 'ignore_saturation' in param:
+        if param['ignore_saturation']:
+            optionstring += ' -SATUR_LEVEL 1000000'
+            optionstring += ' -SATUR_KEY NOPE'
 
-            if 'ignore_saturation' in self.param:
-                if self.param['ignore_saturation']:
-                    optionstring += ' -SATUR_LEVEL 1000000'
-                    optionstring += ' -SATUR_KEY NOPE'
+    commandline = '%s -c %s %s %s' % \
+                  (sextractor_cmd,
+                   param['obsparam']['sex-config-file'],
+                   optionstring, filename)
+    logging.info('call Source Extractor as: %s' % commandline)
 
-            commandline = '%s -c %s %s %s' % \
-                          (sextractor_cmd,
-                           self.param['obsparam']['sex-config-file'],
-                           optionstring, filename)
+    ### run SEXTRACTOR and wait for it to finish
+    try:
+        sex = subprocess.Popen(shlex.split(commandline),
+                               stdout=DEVNULL,
+                               stderr=DEVNULL,
+                               close_fds=True)
+        # do not direct stdout to subprocess.PIPE:
+        # for large FITS files, PIPE will clog, stalling 
+        # subprocess.Popen
+    except Exception as e:
+        print('Source Extractor call:', (e))
+        logging.error('Source Extractor call:', (e))
+        return None
 
-            logging.info('call Source Extractor as: %s' % commandline)
+    sex.wait()
 
+    # read in LDAC file
+    ldac_filename = filename[:filename.find('.fit')]+'.ldac'
+    ldac_data = catalog(ldac_filename)
 
-            ### run SEXTRACTOR and wait for it to finish
-            try:
-                sex = subprocess.Popen(shlex.split(commandline),
-                                       stdout=DEVNULL,
-                                       stderr=DEVNULL,
-                                       close_fds=True)
-                # do not direct stdout to subprocess.PIPE:
-                # for large FITS files, PIPE will clog, stalling 
-                # subprocess.Popen
-            except Exception as e:
-                print('Source Extractor call:', (e))
-                logging.error('Source Extractor call:', (e))
-                extractQueue.task_done() # inform queue, this task is done
-                return None
+    if not os.path.exists(ldac_filename):
+        print('No Source Extractor output for frame', filename)
+        logging.error('No Source Extractor output')
+        return None
 
-            sex.wait()
+    # make sure ldac file contains data
+    if ldac_data.read_ldac(ldac_filename, maxflag=None) is None:
+        print('LDAC file empty', filename, end=' ')
+        logging.error('LDAC file empty: ' + sex_output)
+        return None
 
-            # # check output for error messages from Source Extractor
-            # try:
-            #     sex_output = sex.communicate()[1]
-            #     if 'not found, using internal defaults' in sex_output:
-            #         if not self.param['quiet']:
-            #             print(('ERROR: no Source Extractor setup file ' +
-            #                    'available (should be in %s)') % \
-            #                 self.param['obsparam']['sex-config-file'])
-            #             logging.error(('ERROR: no Source Extractor setup file'+
-            #                            ' available (should be in %s)') % \
-            #             self.param['obsparam']['sex-config-file'])
+    out['catalog_data'] = ldac_data
 
-            #         extractQueue.task_done() # inform queue, this task is done
-            #         return None
-            # except ValueError:
-            #     logging.warning("Cannot read Source Extractor display output")
-            #     pass
-
-            del sex
-
-            # read in LDAC file
-            ldac_filename = filename[:filename.find('.fit')]+'.ldac'
-            ldac_data = catalog(ldac_filename)
-
-            if not os.path.exists(ldac_filename):
-                threadLock.acquire()
-                print('No Source Extractor output for frame', filename, \
-                    '\nplease check output:\n', sex_output)
-                logging.error('No Source Extractor output, ' +
-                              'please check output:' + sex_output)
-                threadLock.release()
-                extractQueue.task_done() # inform queue, this task is done
-                return None
-
-
-            # make sure ldac file contains data
-            if ldac_data.read_ldac(ldac_filename, maxflag=None) is None:
-                extractQueue.task_done()
-                print('LDAC file empty', filename, end=' ')
-                logging.error('LDAC file empty: ' + sex_output)
-                return None
-
-            out['catalog_data'] = ldac_data
-
-            ### update image header with aperture radius and other information
-            hdu = fits.open(filename, mode='update', ignore_missing_end=True)
-            obsparam = self.param['obsparam']
-            # observation midtime
-            if obsparam['obsmidtime_jd'] in hdu[0].header:
-                midtimjd = hdu[0].header[obsparam['obsmidtime_jd']]
-            else:
-                if obsparam['date_keyword'].find('|') == -1:
-                    midtimjd = dateobs_to_jd(\
-                        hdu[0].header[obsparam['date_keyword']]) + \
+    ### update image header with aperture radius and other information
+    hdu = fits.open(filename, mode='update', ignore_missing_end=True)
+    obsparam = param['obsparam']
+    # observation midtime
+    if obsparam['obsmidtime_jd'] in hdu[0].header:
+        midtimjd = hdu[0].header[obsparam['obsmidtime_jd']]
+    else:
+        if obsparam['date_keyword'].find('|') == -1:
+            midtimjd = dateobs_to_jd(\
+                                hdu[0].header[obsparam['date_keyword']]) + \
                         float(hdu[0].header[obsparam['exptime']])/2./86400.
-                else:
-                    datetime = hdu[0].header[\
-                                    obsparam['date_keyword'].split('|')[0]]+ \
-                        'T'+hdu[0].header[\
+        else:
+            datetime = hdu[0].header[\
+                                     obsparam['date_keyword'].split('|')[0]]+ \
+                                     'T'+hdu[0].header[\
                                     obsparam['date_keyword'].split('|')[1]]
-                    midtimjd = dateobs_to_jd(datetime) + \
-                               float(hdu[0].header[\
-                                            obsparam['exptime']])/2./86400.
-            out['time'] = midtimjd
+            midtimjd = dateobs_to_jd(datetime) + \
+                       float(hdu[0].header[\
+                                           obsparam['exptime']])/2./86400.
+    out['time'] = midtimjd
 
-            # hdu[0].header['APRAD'] = \
-            #     (",".join([str(aprad) for aprad in self.param['aprad']]), \
-            #      'aperture phot radius (px)')
-            # hdu[0].header['SEXSNR'] = \
-            #     (self.param['sex_snr'],
-            #      'Sextractor detection SNR threshold')
-            # hdu[0].header['SEXAREA'] = \
-            #     (self.param['source_minarea'],
-            #      'Sextractor source area threshold (px)')
-            out['fits_header'] = hdu[0].header
+    # hdu[0].header['APRAD'] = \
+        #     (",".join([str(aprad) for aprad in self.param['aprad']]), \
+        #      'aperture phot radius (px)')
+    # hdu[0].header['SEXSNR'] = \
+        #     (self.param['sex_snr'],
+    #      'Sextractor detection SNR threshold')
+    # hdu[0].header['SEXAREA'] = \
+        #     (self.param['source_minarea'],
+    #      'Sextractor source area threshold (px)')
+    out['fits_header'] = hdu[0].header
 
-            hdu.flush()
-            hdu.close()
+    hdu.flush()
+    hdu.close()
 
-            threadLock.acquire()
-            logging.info("%d sources extracted from frame %s" % \
-                         (len(ldac_data.data), filename))
-            if not self.param['quiet']:
-                print("%d sources extracted from frame %s" % \
-                    (len(ldac_data.data), filename))
-            threadLock.release()
+    logging.info("%d sources extracted from frame %s" % \
+                 (len(ldac_data.data), filename))
+    if not param['quiet']:
+        print("%d sources extracted from frame %s" % \
+              (len(ldac_data.data), filename))
 
-            del ldac_data
-
-            extractQueue.task_done()  # inform queue that this task is done
+    return out
 
 
 def extract_multiframe(filenames, parameters):
@@ -297,19 +242,21 @@ def extract_multiframe(filenames, parameters):
         return {}
 
     # set aperture photometry DIAMETER as string
-    if ((type(parameters['aprad']) == float and parameters['aprad'] == 0)
-        or (type(parameters['aprad']) == list
-            and len(parameters['aprad']) == 0)):
-        parameters['aperture_diam'] = str(parameters['obsparam']
-                                          ['aprad_default']*2)
-    else:
-        if not isinstance(parameters['aprad'], list) and \
-           not isinstance(parameters['aprad'], numpy.ndarray):
-            parameters['aprad'] = [str(parameters['aprad'])]
-        parameters['aperture_diam'] = ','.join([str(float(rad)*2.) for
-                                                rad in parameters['aprad']])
-
-
+    if _pp_conf.photmode == 'APER':
+        if ((type(parameters['aprad']) == float and
+             parameters['aprad'] == 0)
+            or (type(parameters['aprad']) == list
+                and len(parameters['aprad']) == 0)):
+            parameters['aperture_diam'] = str(parameters['obsparam']
+                                              ['aprad_default']*2)
+        else:
+            if not isinstance(parameters['aprad'], list) and \
+               not isinstance(parameters['aprad'], numpy.ndarray):
+                parameters['aprad'] = [str(parameters['aprad'])]
+            parameters['aperture_diam'] = ','.join([str(float(rad)*2.)
+                                                for rad in
+                                                parameters['aprad']])
+                
     #check what the binning is and if there is a mask available
     binning = get_binning(hdu[0].header, parameters['obsparam'])
     bin_string = '%d,%d' % (binning[0], binning[1])
@@ -322,32 +269,14 @@ def extract_multiframe(filenames, parameters):
 
     ### thread and queue handling
 
-    output = []
-
-    # populate the queue with frame filenames
-    for filename in filenames:
-        while True:
-            if extractQueue.full():
-                time.sleep(0.5)
-            else:
-                break
-        extractQueue.put(filename, block=True)
-
-    # spawning threads
-    # never spawn more threads than there are items in the queue!
-    for thread in range(min([nThreads, len(filenames)])):
-        extractor(parameters, output).start()
-
-    # waiting for threads to finish
-    threadLock.acquire()
-    threadLock.release()
-    extractQueue.join()
-
+    pool = Pool()
+    data = [(parameters, filename) for filename in filenames]
+    output = pool.map(extract_singleframe, data)
+    
     # check if extraction was successful
     if any(['catalog_data' not in list(output[i].keys())
             for i in range(len(output))]):
         return None
-
 
     ### output content
     #
@@ -360,11 +289,6 @@ def extract_multiframe(filenames, parameters):
     # }
     ###
 
-    # delete parameters to not have them stick around in memory
-    # if not deleted, might cause collisions with parameters['paramfile']
-    # in pp_photometry
-    del parameters
-    
     return output
 
 

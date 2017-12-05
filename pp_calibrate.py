@@ -60,8 +60,8 @@ logging.basicConfig(filename = _pp_conf.log_filename,
 def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
                              preferred_catalogs,
                         min_sources=_pp_conf.min_sources_photometric_catalog,
-                             max_sources=5e3, mag_accuracy=0.1,
-                             display=False):
+                             max_sources=1e4, mag_accuracy=0.1,
+                             solar=False, display=False):
     """create a photometric catalog of the field of view"""
 
     for catalogname in preferred_catalogs:
@@ -74,7 +74,7 @@ def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
             print(n_sources, 'sources downloaded from', catalogname)
         if n_sources < min_sources:
             continue
-
+        
         if 'URAT' in catalogname:
             print(catalogname + ' should only be used as an astrometric '
                   'catalog; please use APASS9 instead')
@@ -82,7 +82,44 @@ def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
                           'astrometric catalog; please use APASS9 instead')
             return None
 
-
+        # reject non-solar colors, if requested by user
+        if solar:
+            sol_gr = 0.44 # g-r
+            sol_ri = 0.11 # r-i
+            n_rejected = 0
+            n_raw = cat.shape[0]
+            if ('SDSS' in cat.catalogname or
+                'APASS' in cat.catalogname):
+                n_rejected += cat.reject_sources_with(
+                    (cat['gmag']-cat['rmag']) < sol_gr-_pp_conf.solcol)
+                n_rejected += cat.reject_sources_with(
+                    (cat['gmag']-cat['rmag']) > sol_gr+_pp_conf.solcol)
+                n_rejected += cat.reject_sources_with(
+                    (cat['rmag']-cat['imag']) < sol_ri-_pp_conf.solcol)
+                n_rejected += cat.reject_sources_with(
+                    (cat['rmag']-cat['imag']) > sol_ri+_pp_conf.solcol)
+            elif 'PANSTARRS' in cat.catalogname:
+                cat.transform_filters('g') # derive Sloan griz
+                n_rejected += cat.reject_sources_with(
+                    (cat['_gmag']-cat['_rmag']) <sol_gr-_pp_conf.solcol)
+                n_rejected += cat.reject_sources_with(
+                    (cat['_gmag']-cat['_rmag']) >sol_gr+_pp_conf.solcol)
+                n_rejected += cat.reject_sources_with(
+                    (cat['_rmag']-cat['_imag']) <sol_ri-_pp_conf.solcol)
+                n_rejected += cat.reject_sources_with(
+                    (cat['_rmag']-cat['_imag']) >sol_ri+_pp_conf.solcol)
+            else:
+                if display:
+                    print('Warning: solar colors not supported for catalog',
+                          cat.catalogname)
+                    logging.warning(('Warning: solar colors not supported ' +
+                                 'for catalog'), cat.catalogname)
+            if display:
+                print('%d/%d sources left with solar-like colors' %
+                      (n_raw-n_rejected, n_raw))
+                logging.info('%d/%d sources left with solar-like colors' %
+                             (n_raw-n_rejected, n_raw))
+        
         # transform catalog to requested filtername, if necessesary
         if ( n_sources > 0 and
              ('SDSS' in catalogname and
@@ -92,9 +129,9 @@ def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
              ('APASS' in catalogname and
               filtername not in {'B', 'V', 'g', 'r', 'i'}) or
              ('2MASS' in catalogname and
-              filtername not in {'J', 'H', 'K'}) or
+              filtername not in {'J', 'H', 'K', 'Ks'}) or 
              ('PANSTARRS' in catalogname and
-              filtername not in {'g', 'r', 'i', 'z', 'y'}) ):
+              filtername not in {'gp1', 'rp1', 'ip1', 'zp1', 'yp1'}) ):
 
             n_transformed = cat.transform_filters(filtername) - \
                             cat.reject_sources_with(\
@@ -131,7 +168,7 @@ def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
                 logging.info('less than %d sources (%d), try other catalog' %
                              (min_sources, n_sources))
                 continue
-
+            
     # end up here if none of the catalogs has n_sources > min_sources
     if display:
         print('ERROR: not enough sources in reference catalog %s (%d)' % \
@@ -168,15 +205,19 @@ def derive_zeropoints(ref_cat, catalogs, filtername, minstars_external,
 
         ### read this: if there is a
         # ValueError: boolean index array should have 1 dimension
+        # or
+        # IndexError: too many indices for array
         # pointing here, the problem is that pp_extract has not been
         # properly run using a single aperture
         ### currently it seems like pp_photometry (maybe callhorizons)
         # has not finished properly
 
-        cat.reject_sources_other_than(cat.data['MAG_APER'] != 99)
-        cat.reject_sources_other_than(cat.data['MAGERR_APER'] != 99)
-        cat.reject_sources_with(numpy.isnan(cat.data['MAG_APER']))
-        cat.reject_sources_with(numpy.isnan(cat.data['MAGERR_APER']))
+        cat.reject_sources_other_than(cat.data['MAG_'+_pp_conf.photmode] != 99)
+        cat.reject_sources_other_than(cat.data['MAGERR_'
+                                               +_pp_conf.photmode] != 99)
+        cat.reject_sources_with(numpy.isnan(cat.data['MAG_'+_pp_conf.photmode]))
+        cat.reject_sources_with(numpy.isnan(cat.data['MAGERR_'+
+                                                     _pp_conf.photmode]))
 
         match = ref_cat.match_with(cat,
                                 match_keys_this_catalog=['ra.deg', 'dec.deg'],
@@ -186,8 +227,9 @@ def derive_zeropoints(ref_cat, catalogs, filtername, minstars_external,
                                                       'ident',
                                                       'ra.deg',
                                                       'dec.deg'],
-                                extract_other_catalog=['MAG_APER',
-                                                       'MAGERR_APER'],
+                                extract_other_catalog=['MAG_'+_pp_conf.photmode,
+                                                       'MAGERR_'+
+                                                       _pp_conf.photmode],
                                 tolerance=old_div(_pp_conf.pos_epsilon,3600.))
 
         # artificially blow up incredibly small ref_cat uncertainties
@@ -259,7 +301,7 @@ def derive_zeropoints(ref_cat, catalogs, filtername, minstars_external,
                                    match])
 
             # identify most significant outliers (not weighted) and remove them
-            for repeat in range(max([1, int(old_div(len(residuals),25.))])):
+            for repeat in range(max([1, int(len(residuals)/50)])):
                 popidx        = numpy.argmax(numpy.absolute(residuals \
                                                             - zeropoint))
                 residuals     = numpy.delete(residuals, popidx)
@@ -270,13 +312,16 @@ def derive_zeropoints(ref_cat, catalogs, filtername, minstars_external,
         # select best-fit zeropoint based on minimum chi2
         idx = numpy.nanargmin([step[2] for step in clipping_steps])
         # # select best-fit zeropoint based on minimum sigma
-        # idx = numpy.nanargmin([step[1] for step in clipping_steps])
+        #idx = numpy.nanargmin([step[1] for step in clipping_steps])
 
-
-
-        # reduce idx to increase the number of source until minstars is met
-        while len(clipping_steps[idx][3]) < minstars and idx > 0:
-            idx -= 1
+        # reduce/increase idx to increase the number of sources until
+        # minstars is met
+        if len(clipping_steps[idx][3]) < minstars:
+            while len(clipping_steps[idx][3]) < minstars and idx > 0:
+                idx -= 1
+        else:
+            while len(clipping_steps[idx][3]) < minstars and idx > 0:
+                idx += 1
 
         output['zeropoints'].append({'filename':cat.catalogname,
                                      'zp': clipping_steps[idx][0],
@@ -301,8 +346,8 @@ def derive_zeropoints(ref_cat, catalogs, filtername, minstars_external,
 
 
         cat.add_fields([filterkey, efilterkey],
-                       [cat['MAG_APER'] + clipping_steps[idx][0],
-                        numpy.sqrt(cat['MAGERR_APER']**2 + \
+                       [cat['MAG_'+_pp_conf.photmode] + clipping_steps[idx][0],
+                        numpy.sqrt(cat['MAGERR_'+_pp_conf.photmode]**2 + \
                                    clipping_steps[idx][1]**2)],
                        ['F', 'F'])
 
@@ -338,7 +383,9 @@ def derive_zeropoints(ref_cat, catalogs, filtername, minstars_external,
 
 
 def calibrate(filenames, minstars, manfilter, manualcatalog,
-              obsparam, maxflag=3, display=False, diagnostics=False):
+              obsparam, maxflag=3,
+              magzp=None, solar=False,
+              display=False, diagnostics=False):
     """
     wrapper for photometric calibration
     """
@@ -348,7 +395,7 @@ def calibrate(filenames, minstars, manfilter, manualcatalog,
     for filename in filenames:
         hdulist = fits.open(filename, ignore_missing_end=True)
         try:
-            filtername = hdulist[0].header['FILTER']
+            filtername = hdulist[0].header[obsparam['filter']]
         except KeyError:
             print('Cannot read filter name from file %s' % filename)
             logging.error('Cannot read filter name from file %s' % filename)
@@ -409,17 +456,36 @@ def calibrate(filenames, minstars, manfilter, manualcatalog,
     else:
         preferred_catalogs = obsparam['photometry_catalogs']
 
-    if filtername is not None:
+    ref_cat = None
+    if filtername is not None and magzp is None:
         ref_cat = create_photometrycatalog(ra_deg, dec_deg, rad_deg,
                                            filtername, preferred_catalogs,
-                                           max_sources=5e3, display=display)
-    else:
-        ref_cat = None
-
+                                           max_sources=2e4, solar=solar,
+                                           display=display)
+       
     if ref_cat == None:
-        print('Skip calibration - report instrumental magnitudes')
-        logging.error('Skip calibration - report instrumental magnitudes')
+        if magzp == None:
+            print('Skip calibration - report instrumental magnitudes')
+            logging.info('Skip calibration - report instrumental magnitudes')
+        else:
+            print(('use externally provided magnitude zeropoint: '+
+                   '%5.2f+-%4.2f') % (magzp[0], magzp[1]))
+            logging.info(('use externally provided magnitude zeropoint: '+
+                   '%5.2f+-%4.2f') % (magzp[0], magzp[1]))
 
+            # manually add catalog fields and apply magnitude zeropoint
+            filterkey = filtername+'mag'
+            efilterkey = 'e_' + filtername + 'mag'
+            for cat in catalogs:
+                cat.add_fields([filterkey, efilterkey],
+                               [cat['MAG_'+_pp_conf.photmode] + magzp[0],
+                            numpy.sqrt(cat['MAGERR_'+_pp_conf.photmode]**2 + \
+                                           magzp[1]**2)],
+                               ['F', 'F'])
+                cat.origin  = (cat.origin.strip()+
+                               ';'+filtername+'_manual_zp;')
+                cat.history += 'calibrated using manual zeropoint'
+            
         ### write calibrated database files
         logging.info('write calibrated data into database files')
         if display:
@@ -512,6 +578,12 @@ if __name__ == '__main__':
                         help='skip calibration, ' + \
                              'only report instrumental magnitudes',
                         action="store_true")
+    parser.add_argument('-magzp', help=('provide external magnitude zeropoint' +
+                                        ' and uncertainty'),
+                        nargs=2)
+    parser.add_argument('-solar',
+                        help='restrict to solar-color stars',
+                        action="store_true", default=False)
     parser.add_argument('images', help='images to process', nargs='+')
     args = parser.parse_args()
     minstars = float(args.minstars)
@@ -519,6 +591,8 @@ if __name__ == '__main__':
     maxflag = int(float(args.maxflag))
     manualcatalog = args.cat
     instrumental = args.instrumental
+    man_magzp = args.magzp
+    solar = args.solar
     filenames = args.images
 
     # manfilter: None: instrumental magnitudes, False: no manfilter provided
@@ -544,8 +618,12 @@ if __name__ == '__main__':
         sys.exit(0)
     obsparam = _pp_conf.telescope_parameters[telescope]
 
+    if man_magzp is not None:
+        man_magzp = (float(man_magzp[0]), float(man_magzp[1]))
+    
     calibration = calibrate(filenames, minstars, manfilter,
                             manualcatalog, obsparam, maxflag=maxflag,
+                            magzp=man_magzp, solar=solar,
                             display=True, diagnostics=True)
 
 

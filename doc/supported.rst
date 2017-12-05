@@ -24,6 +24,8 @@ observatories/instruments:
 | Discovery Channel        | Large Monolithic   | DCTLMI         |
 | Telescope                | Imager             |                |
 +--------------------------+--------------------+----------------+
+| IRSF 1.4m                | SIRIUS             | IRSFSIRIUS     |
++--------------------------+--------------------+----------------+
 | KMTnet SAAO              | --- (*)            | KMTNETS        |
 +--------------------------+--------------------+----------------+
 | KPNO 4m                  | Mosaic 1           | KPNO4MOS1      |
@@ -48,8 +50,12 @@ observatories/instruments:
 | Telescopio Nazionale     | DOLORES            | TNGDOLORES     |
 | Galileo                  |                    |                |
 +--------------------------+--------------------+----------------+
+| UKIRT                    | WFCAM              | UKIRTWFCAM     |
++--------------------------+--------------------+----------------+
 | Vatican Advanced         | VATT4k             | VATT4K         |
 | Technology Telescope     |                    |                |
++--------------------------+--------------------+----------------+
+| Very Large Telescope     | FORS2              | VLTFORS2       |
 +--------------------------+--------------------+----------------+
 | WIYN 0.9m                | Half Degree Imager | WIYN09HDI      |
 +--------------------------+--------------------+----------------+

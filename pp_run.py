@@ -66,7 +66,7 @@ logging.basicConfig(filename = _pp_conf.log_filename,
 
 
 def run_the_pipeline(filenames, man_targetname, man_filtername,
-                     fixed_aprad, source_tolerance):
+                     fixed_aprad, source_tolerance, solar):
     """
     wrapper to run the photometry pipeline
     """
@@ -263,7 +263,8 @@ def run_the_pipeline(filenames, man_targetname, man_filtername,
                                "only </FONT>; "
     # a fixed aperture radius has been used
     else:
-        summary_message += "using a fixed aperture radius of %.1f px;" % aprad
+        if _pp_conf.photmode == 'APER':
+            summary_message += "using a fixed aperture radius of %.1f px;" % aprad
 
 
     # add information to summary website, if requested
@@ -279,7 +280,8 @@ def run_the_pipeline(filenames, man_targetname, man_filtername,
     print('\n----- run photometric calibration\n')
 
     calibration = pp_calibrate.calibrate(filenames, minstars, filtername,
-                                         manualcatalog, obsparam, display=True,
+                                         manualcatalog, obsparam, solar=solar,
+                                         display=True,
                                          diagnostics=True)
 
     # if calibration == None:
@@ -353,6 +355,9 @@ if __name__ == '__main__':
                         help='tolerance on source properties for registration',
                         choices=['none', 'low', 'medium', 'high'],
                         default='high')
+    parser.add_argument('-solar',
+                        help='restrict to solar-color stars',
+                        action="store_true", default=False)    
     parser.add_argument('images', help='images to process or \'all\'',
                         nargs='+')
 
@@ -362,6 +367,7 @@ if __name__ == '__main__':
     man_filtername = args.filter
     fixed_aprad = float(args.fixed_aprad)
     source_tolerance = args.source_tolerance
+    solar = args.solar
     filenames = args.images
 
 
@@ -406,7 +412,7 @@ if __name__ == '__main__':
     else:
         # call run_the_pipeline only on filenames
         run_the_pipeline(filenames, man_targetname, man_filtername,
-                         fixed_aprad, source_tolerance)
+                         fixed_aprad, source_tolerance, solar)
         pass
 
 

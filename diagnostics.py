@@ -27,19 +27,22 @@ import os
 import sys
 import numpy
 import logging
-import astropy
+import subprocess
 from astropy.io import fits
 from astropy import wcs
+from astropy.visualization import (astropy_mpl_style, ZScaleInterval,
+                                   ImageNormalize, LogStretch, LinearStretch)
 import datetime
 try:
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pylab as plt
+    matplotlib.rcdefaults() # restore default parameters
+    plt.style.use(astropy_mpl_style) # use astropy style
 except ImportError:
     print('Module matplotlib not found. Please install with: pip install '
           'matplotlib')
     sys.exit()
-import subprocess
 
 try:
     from scipy.misc import toimage # requires Pillow
@@ -171,7 +174,8 @@ def insert_into_summary(text):
 
 ### individual pipeline process diagnostic websites
 
-def create_index(filenames, directory, obsparam, display=False):
+def create_index(filenames, directory, obsparam,
+                 display=False, imagestretch='linear'):
     """
     create index.html
     diagnostic root website for one pipeline process
@@ -238,24 +242,22 @@ def create_index(filenames, directory, obsparam, display=False):
 
         ### create frame image
         imgdat = hdulist[0].data
+        # clip extreme values to prevent crash of imresize
+        imgdat = numpy.clip(imgdat, numpy.percentile(imgdat, 1),
+                            numpy.percentile(imgdat, 99))
         imgdat = imresize(imgdat, 
                           min(1., 1000./numpy.max(imgdat.shape)), 
                           interp='nearest')
-        # resize image larger than 1000px on one side
+        #resize image larger than 1000px on one side
 
-        median = numpy.median(imgdat[int(imgdat.shape[1]*0.25):
-                                     int(imgdat.shape[1]*0.75),
-                                     int(imgdat.shape[0]*0.25):
-                                     int(imgdat.shape[0]*0.75)])
-        std    = numpy.std(imgdat[int(imgdat.shape[1]*0.25):
-                                  int(imgdat.shape[1]*0.75),
-                                  int(imgdat.shape[0]*0.25):
-                                  int(imgdat.shape[0]*0.75)])
-
+        norm = ImageNormalize(imgdat, interval=ZScaleInterval(),
+                      stretch={'linear': LinearStretch(),
+                               'log': LogStretch()}[imagestretch])
+        
         plt.figure(figsize=(5, 5))
 
-        img = plt.imshow(imgdat, cmap='gray', vmin=median-1.5*std,
-                         vmax=median+1.5*std, origin='lower')
+        img = plt.imshow(imgdat, cmap='gray', norm=norm,
+                         origin='lower')
         # remove axes
         plt.axis('off')
         img.axes.get_xaxis().set_visible(False)
@@ -283,7 +285,7 @@ def create_index(filenames, directory, obsparam, display=False):
 
 ### registration results website
 
-def add_registration(data, extraction_data):
+def add_registration(data, extraction_data, imagestretch='linear'):
     """
     add registration results to website
     """
@@ -326,18 +328,17 @@ def add_registration(data, extraction_data):
         imgdat = fits.open(dat['fits_filename'],
                            ignore_missing_end=True)[0].data
         resize_factor = min(1., 1000./numpy.max(imgdat.shape))
+        # clip extreme values to prevent crash of imresize
+        imgdat = numpy.clip(imgdat, numpy.percentile(imgdat, 1),
+                            numpy.percentile(imgdat, 99))
         imgdat = imresize(imgdat, resize_factor, interp='nearest')
         header = fits.open(dat['fits_filename'], 
                            ignore_missing_end=True)[0].header
-        median = numpy.median(imgdat[int(imgdat.shape[1]*0.25):
-                                     int(imgdat.shape[1]*0.75),
-                                     int(imgdat.shape[0]*0.25):
-                                     int(imgdat.shape[0]*0.75)])
-        std    = numpy.std(imgdat[int(imgdat.shape[1]*0.25):
-                                     int(imgdat.shape[1]*0.75),
-                                     int(imgdat.shape[0]*0.25):
-                                     int(imgdat.shape[0]*0.75)])
 
+        norm = ImageNormalize(imgdat, interval=ZScaleInterval(),
+                      stretch={'linear': LinearStretch(),
+                               'log': LogStretch()}[imagestretch])
+        
         # turn relevant header keys into floats
         # astropy.io.fits bug
         for key, val in list(header.items()):
@@ -347,8 +348,9 @@ def add_registration(data, extraction_data):
                 header[key] = float(val)
                 
         plt.figure(figsize=(5, 5))
-        img = plt.imshow(imgdat, cmap='gray', vmin=median-1.5*std,
-                         vmax=median+1.5*std, origin='lower')
+        img = plt.imshow(imgdat, cmap='gray', norm=norm,
+                         origin='lower')
+
         # remove axes
         plt.axis('off')
         img.axes.get_xaxis().set_visible(False)
@@ -506,7 +508,7 @@ def add_photometry(data, extraction):
     return None
 
 
-def add_calibration(data):
+def add_calibration(data, imagestretch='linear'):
     """
     add calibration results to website
     """
@@ -637,8 +639,9 @@ def add_calibration(data):
                      + "<TD>%12.8f</TD><TD>%.3f+-%.3f</TD>" \
                      + "<TD>%.3f+-%.3f</TD>" \
                      + "<TD>%.3f+-%.3f</TD><TD>%.3f</TD></TR>") % \
-                (i+1, dat['match'][0][2][idx], dat['match'][0][3][idx],
-                 dat['match'][0][4][idx], dat['match'][0][0][idx],
+                (i+1, dat['match'][0][2][idx].decode('utf8'),
+                 dat['match'][0][3][idx],
+                 dat['match'][0][4][idx], dat['match'][0][0][idx], 
                  dat['match'][0][1][idx],
                  dat['match'][1][0][idx], dat['match'][1][1][idx],
                  dat['zp']+dat['match'][1][0][idx],
@@ -653,28 +656,28 @@ def add_calibration(data):
                         '.fits'
         imgdat = fits.open(fits_filename, ignore_missing_end=True)[0].data
         resize_factor = min(1., 1000./numpy.max(imgdat.shape))
+        # clip extreme values to prevent crash of imresize
+        imgdat = numpy.clip(imgdat, numpy.percentile(imgdat, 1),
+                            numpy.percentile(imgdat, 99))
         imgdat = imresize(imgdat, resize_factor, interp='nearest')
         header = fits.open(fits_filename, ignore_missing_end=True)[0].header
-        median = numpy.median(imgdat[int(imgdat.shape[1]*0.25):
-                                     int(imgdat.shape[1]*0.75),
-                                     int(imgdat.shape[0]*0.25):
-                                     int(imgdat.shape[0]*0.75)])
-        std    = numpy.std(imgdat[int(imgdat.shape[1]*0.25):
-                                     int(imgdat.shape[1]*0.75),
-                                     int(imgdat.shape[0]*0.25):
-                                     int(imgdat.shape[0]*0.75)])
 
+        norm = ImageNormalize(imgdat, interval=ZScaleInterval(),
+                      stretch={'linear': LinearStretch(),
+                               'log': LogStretch()}[imagestretch])
+        
         # turn relevant header keys into floats
         # astropy.io.fits bug
         for key, val in list(header.items()):
-            if 'CD1' in key or 'CD2' in key or \
+            if 'CD1_' in key or 'CD2_' in key or \
                'CRVAL' in key or 'CRPIX' in key or \
                'EQUINOX' in key:
                 header[key] = float(val)
+                
+        plt.figure(figsize=(5, 5))
+        img = plt.imshow(imgdat, cmap='gray', norm=norm,
+                         origin='lower')
 
-        plt.figure(figsize=(5,5))
-        img = plt.imshow(imgdat, cmap='gray', vmin=median-1.5*std,
-                         vmax=median+1.5*std, origin='lower')
         # remove axes
         plt.axis('off')
         img.axes.get_xaxis().set_visible(False)
@@ -743,7 +746,7 @@ def add_calibration_instrumental(data):
     return None
 
 
-def add_results(data):
+def add_results(data, imagestretch='linear'):
     """
     add results to website
     """
@@ -828,78 +831,61 @@ def add_results(data):
 
             ## run statistics over center of the frame around the target
             if thumbdata.shape[0] > 0 and thumbdata.shape[1] > 0:
-                median = numpy.median(thumbdata[old_div(boxsize,2)-20:old_div(boxsize,2)+20,
-                                                old_div(boxsize,2)-20:old_div(boxsize,2)+20])
-                std = numpy.std(thumbdata[old_div(boxsize,2)-20:old_div(boxsize,2)+20,
-                                          old_div(boxsize,2)-20:old_div(boxsize,2)+20])
-                maxval = numpy.max(thumbdata[old_div(boxsize,2)-20:old_div(boxsize,2)+20,
-                                             old_div(boxsize,2)-20:old_div(boxsize,2)+20])
-            else:
-                logging.warning('cannot produce thumbnail image ' + \
-                                'for %s in frame %s' % (target, dat[10]))
-                continue
+                norm = ImageNormalize(thumbdata, interval=ZScaleInterval(),
+                                stretch={'linear': LinearStretch(),
+                                         'log': LogStretch()}[imagestretch])
+                # extract aperture radius
+                if _pp_conf.photmode == 'APER':
+                    aprad = float(hdulist[0].header['APRAD'])
 
+                # create plot
+                #plotsize = 7. # inches
+                fig = plt.figure()
+                img = plt.imshow(thumbdata, cmap='gray',
+                                 origin='lower', norm=norm)
+                # remove axes
+                plt.axis('off')
+                img.axes.get_xaxis().set_visible(False)
+                img.axes.get_yaxis().set_visible(False)
 
+                plt.annotate('%s\n%5.3f+-%5.3f mag' % (fitsfilename,
+                                                       dat[7], dat[8]), (3,10), 
+                             color='white')
 
-            # ## run statistics over whole frame
-            # if thumbdata.shape[0] > 0 and thumbdata.shape[1] > 0:
-            #     median = numpy.median(numpy.ma.masked_equal(thumbdata,
-            #                                                 0).compressed())
-            #     std = numpy.std(numpy.ma.masked_equal(thumbdata,
-            #                                           0).compressed())
-            #     maxval = numpy.max(thumbdata[boxsize/2-10:boxsize/2+10,
-            #                                  boxsize/2-10:boxsize/2+10])
-            # else:
-            #     logging.warning('cannot produce thumbnail image ' + \
-            #                     'for %s in frame %s' % (target, dat[10]))
-            #     continue
+                # place aperture
+                if _pp_conf.photmode == 'APER':
+                    targetpos = plt.Circle((boxsize/2, boxsize/2), 
+                                           aprad, ec='red', fc='none',
+                                           linewidth=1)
+                else:
+                    targetpos = plt.Rectangle((boxsize/2-7, boxsize/2-7),
+                                              15, 15, ec='red', fc='none',
+                                              linewidth=1)
+                plt.gca().add_patch(targetpos)
+                    
+                # place expected position (if within thumbnail)
+                if (abs(exp_x-obj_x) <= old_div(boxsize,2.) and 
+                    abs(exp_y-obj_y) <= old_div(boxsize,2.)): 
+                    plt.scatter(exp_x-obj_x+old_div(boxsize,2.), 
+                                exp_y-obj_y+old_div(boxsize,2.), 
+                                marker='+', s=100, color='green')
 
-
-
-            # extract aperture radius
-            aprad = float(hdulist[0].header['APRAD'])
-
-            # create plot
-            #plotsize = 7. # inches
-            fig = plt.figure()#figsize=(plotsize,plotsize), 
-                             #dpi=old_div(boxsize,plotsize))
-            img = plt.imshow(thumbdata, cmap='gray',
-                             vmin=median-2*std,
-                             #vmax=maxval,
-                             vmax=min([median+2*std,maxval]),
-                             origin='lower')
-            # remove axes
-            plt.axis('off')
-            img.axes.get_xaxis().set_visible(False)
-            img.axes.get_yaxis().set_visible(False)
-
-            plt.annotate('%s\n%5.3f+-%5.3f mag' % (fitsfilename,
-                                                   dat[7], dat[8]), (3,10),
-                         color='white')
-
-            # place aperture
-            circle = plt.Circle((old_div(boxsize,2.), old_div(boxsize,2.)),
-                                aprad, ec='red', fc='none', linewidth=1)
-            plt.gca().add_patch(circle)
-
-            # place expected position (if within thumbnail)
-            if (abs(exp_x-obj_x) <= old_div(boxsize,2.) and
-                abs(exp_y-obj_y) <= old_div(boxsize,2.)):
-                plt.scatter(exp_x-obj_x+old_div(boxsize,2.),
-                            exp_y-obj_y+old_div(boxsize,2.),
-                            marker='+', s=100, color='green')
-
-            thumbfilename = '.diagnostics/' + \
+                thumbfilename = '.diagnostics/' + \
                             target.translate(_pp_conf.target2filename) + '_' + \
                             fitsfilename[:fitsfilename.find('.fit')] + \
                             '_thumb.png'
-            plt.savefig(thumbfilename, format='png',
-                        bbox_inches='tight', 
-                        pad_inches=0)
-            plt.close()
-            hdulist.close()
-            data['thumbnailplots'][target].append((fitsfilename,
-                                                     thumbfilename))
+                plt.savefig(thumbfilename, format='png',
+                            bbox_inches='tight', 
+                            pad_inches=0)
+                plt.close()
+                hdulist.close()
+                data['thumbnailplots'][target].append((fitsfilename, 
+                                                       thumbfilename))
+            else:
+                logging.warning('cannot produce thumbnail image ' + \
+                                'for %s in frame %s' % (target, dat[10]))
+                continue 
+
 
         ## create gif animation
         gif_filename = ('%s.gif' % target.translate(_pp_conf.target2filename))

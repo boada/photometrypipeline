@@ -34,42 +34,47 @@ def encode_number_desig(filename):
     number = '     '
     desig = None
 
-    filename = filename.replace('photometry_', '').replace('.dat', '')
-    
-    print('processing', filename)
-    
-    for i, line in enumerate(filename.split('_')):
-        if '(' in line and ')' in filename.split('_')[i+1]:
-            desig = " ".join(filename.split('_')[i:i+2])[1:-1]
-        elif line.isdigit():
-            number = ("%05d" % int(float(line)))
+    desig = '1234 AB123'
+    number = '666'
 
-    # encode number
-    try:
-        if float(number[:-4]) > 25:
-            number = (chr(65+(int(float(number[:-4]))-10+6)) +
-                      number[-4:])
-        elif float(number[:-4]) > 10:
-            number = (chr(65+(int(float(number[:-4]))-10)) +
-                      number[-4:])
-    except ValueError:
-        pass
+
+    
+    # filename = filename.replace('photometry_', '').replace('.dat', '')
+    
+    # print('processing', filename)
+    
+    # for i, line in enumerate(filename.split('_')):
+    #     if '(' in line and ')' in filename.split('_')[i+1]:
+    #         desig = " ".join(filename.split('_')[i:i+2])[1:-1]
+    #     elif line.isdigit():
+    #         number = ("%05d" % int(float(line)))
+
+    # # encode number
+    # try:
+    #     if float(number[:-4]) > 25:
+    #         number = (chr(65+(int(float(number[:-4]))-10+6)) +
+    #                   number[-4:])
+    #     elif float(number[:-4]) > 10:
+    #         number = (chr(65+(int(float(number[:-4]))-10)) +
+    #                   number[-4:])
+    # except ValueError:
+    #     pass
         
-    # encode designation
-    yr = desig.split()[0]
-    yr = {'19':'J', '20':'K'}[yr[:2]] + yr[2:]
+    # # encode designation
+    # yr = desig.split()[0]
+    # yr = {'19':'J', '20':'K'}[yr[:2]] + yr[2:]
 
-    des = desig.split()[1]
-    if len(des) > 4:
-        if float(des[2:-2]) <= 25: 
-            des = des[0] + chr(65+(int(float(des[2:-2]))-10+6)) + des[1]
-        elif float(des[2:-2]) > 10: 
-            des = des[0] + chr(65+(int(float(des[2:-2]))-10)) + des[1]
-    else:
-        if len(des) > 2:
-            des = des[0] + ('{:02d}'.format(int(float(des[2:])))) + des[1]
+    # des = desig.split()[1]
+    # if len(des) > 4:
+    #     if float(des[2:-2]) <= 25: 
+    #         des = des[0] + chr(65+(int(float(des[2:-2]))-10+6)) + des[1]
+    #     elif float(des[2:-2]) > 10: 
+    #         des = des[0] + chr(65+(int(float(des[2:-2]))-10)) + des[1]
+    # else:
+    #     if len(des) > 2:
+    #         des = des[0] + ('{:02d}'.format(int(float(des[2:])))) + des[1]
             
-    desig = yr + des
+    # desig = yr + des
     
     return number, desig
 

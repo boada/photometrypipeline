@@ -162,24 +162,24 @@ def get_binning(header, obsparam):
     if obsparam['binning'][0] == 1 and obsparam['binning'][1] == 1:
         binning_x = 1
         binning_y = 1
-    elif '_' in obsparam['binning'][0]:
-        if '_blank' in obsparam['binning'][0]:
-            binning_x = float(header[obsparam['binning'][0].
-                                     split('_')[0]].split()[0])
-            binning_y = float(header[obsparam['binning'][1].
-                                     split('_')[0]].split()[1])
-        elif '_x' in obsparam['binning'][0]:
-            binning_x = float(header[obsparam['binning'][0].
-                                     split('_')[0]].split('x')[0])
-            binning_y = float(header[obsparam['binning'][1].
-                                     split('_')[0]].split('x')[1])
-        elif '_CH_' in obsparam['binning'][0]:
+    elif '#' in obsparam['binning'][0]:
+        if '#blank' in obsparam['binning'][0]:
+            binning_x = float(header[obsparam['binning'][0].\
+                                     split('#')[0]].split()[0])
+            binning_y = float(header[obsparam['binning'][1].\
+                                     split('#')[0]].split()[1])
+        elif '#x' in obsparam['binning'][0]:
+            binning_x = float(header[obsparam['binning'][0].\
+                                     split('#')[0]].split('x')[0])
+            binning_y = float(header[obsparam['binning'][1].\
+                                     split('#')[0]].split('x')[1])
+        elif '#CH#' in obsparam['binning'][0]:
             # only for RATIR
             channel = header['INSTRUME'].strip()[1]
-            binning_x = float(header[obsparam['binning'][0].replace('_CH_',
-                                                                    channel)])
-            binning_y = float(header[obsparam['binning'][1].replace('_CH_',
-                                                                    channel)])
+            binning_x = float(header[obsparam['binning'][0].
+                                     replace('#CH#', channel)])
+            binning_y = float(header[obsparam['binning'][1].
+                                     replace('#CH#', channel)])
     else:
         binning_x = header[obsparam['binning'][0]]
         binning_y = header[obsparam['binning'][1]]

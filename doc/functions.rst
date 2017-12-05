@@ -4,7 +4,7 @@ Functions
 The individual pipeline functions are introduced and explained
 below. All functions presented here can be called from the terminal. 
 
-.. function:: pp_run ([-prefix string], [-target string], [-filter string], [-fixed_aprad float], images)
+.. function:: pp_run ([-prefix string], [-target string], [-filter string], [-fixed_aprad float], [-solar], images)
 
    serves as a wrapper for all the individual pipeline processes
 
@@ -23,8 +23,9 @@ below. All functions presented here can be called from the terminal.
                              level at which sources are rejected in
                              the image registration process; see
                              :func:`pp_register` for details.
-		   
-
+   :param -solar: the photometric calibration (`pp_calibrate`) is only
+                  using stars with solar-like colors (see
+                  `pp_calibrate` documentation for details)
    :param images: images on which the pipeline is supposed to run,
                   wildcard symbols (``'*'``, ``'?'``) can be used; or,
                   by using ``all``, PP runs on all FITS files in
@@ -43,7 +44,7 @@ The following functions describe the individual pipeline processes in
 the logical order:
 
 
-.. function:: pp_prepare ([-ra degrees], [-dec degrees], [-flipx], [-flipy], [-rotate degrees], [-target string], images)
+.. function:: pp_prepare ([-ra degrees], [-dec degrees], [-flipx], [-flipy], [-rotate degrees], [-target string], [-keep_wcs], images)
 
    prepares image files for use in the pipeline
 
@@ -62,6 +63,8 @@ the logical order:
                    images, this overwrites the ``OBJECT`` keyword in the
                    FITS headers; note to replace blanks with
                    underscores if the target's name is a designation
+   :param keep_wcs: retain original wcs header information and use that as
+		    initial seed for the image registration process
    :param images: images on which `pp_prepare` is supposed to run
 
 		  
@@ -227,7 +230,7 @@ the logical order:
    the measured FWHMs.
 
 
-.. function:: pp_calibrate ([-minstars int/float], [-catalog string], [-filter string], [-maxflag integer], [-instrumental], images)
+.. function:: pp_calibrate ([-minstars int/float], [-catalog string], [-filter string], [-maxflag integer], [-instrumental], [-solar], images)
 
    photometric calibration of each input frame in one specific filter
    
@@ -260,6 +263,15 @@ the logical order:
                          calibration process is skipped entirely and
                          instrumental magnitudes are written to the
                          photometry database for each image
+   :param -solar: only use stars with solar-like colors; use this
+                  feature for photometry of Solar System
+                  bodies. Solar-like stars are selected based on their
+                  `g-i` and `r-i` colors, hence, this feature is
+                  currently only available for photometric calibration
+                  using the PANSTARRS, APASS, and SDSS catalogs. The
+                  threshold of solar-like colors is defined by the
+                  `_pp_conf.solcol` parameter; the default is the
+                  actual color index +- 0.2 mag.
    :param images: images to run `pp_calibrate` on
 
    
@@ -393,8 +405,81 @@ Functions that provide additional functionality:
    please refer to the :ref:`manual target identification` walkthrough
    for a recipe on how to use this function.
 
-		  
+   
+.. function:: pp_combine ([-comoving], [-targetname str],
+	      [-manual_rates float, float],
+	      [-method {average, median, clipped}], [-keep_files],
+	      images)
+
+   image combination
+
+   :param comoving: if used, the images will be combined in the moving
+                    frame of a moving target; the target name will be
+                    taken from the ``OBJECT`` header keyword or the
+                    ``targetname`` parameter
+   :param targetname: manual override for the target name if
+                      ``comoving`` parameter is used
+   :param manual_rates: use manual rates instead of queried
+                        ephemerides; in units of arcsec per second in
+                        RA and Dec; RA rate includes factor of cosine
+                        Dec
+   :param method: image combination method: [average, median, clipped]
+                  as provided by `SWARP`_
+   :param keep_files: if used, intermediate files are not deleted
+   :param images: images to run `pp_manident` on
+
+   This function allows the combination of images using different
+   methods. The function makes use of the `SWARP`_ software. By
+   default, images are combined in the rest frame of the background
+   (stars are enhanced, moving objects are partially removed); the
+   ``-comoving`` option enables the combination in the moving frame of
+   one target. In the latter case, images are shifted based on target
+   ephemerides; manual rates can be provided, too. For details on the
+   combination process, please refer to the `SWARP`_ manual. Image
+   files produced by ``pp_combine`` can be used in any other PP
+   function.
+
+
+.. function:: pp_stackedphotometry ([-comoving], [-filter str],
+	      [-method {average, median, clipped}], [-fixed_aprad
+	      float], [-snr float], [-solar], images)
+
+   perform automated aperture photometry on stacked images
+
+   :param comoving: if used, the images will be combined in the moving
+                    frame of a moving target; the target name will be
+                    taken from the ``OBJECT`` header keyword or the
+                    ``targetname`` parameter
+   :param filter: manual override for the filter band
+   :param method: image combination method: [average, median, clipped]
+                  as provided by `SWARP`_; default: clipped
+   :param fixed_aprad: use fixed aperture radius for aperture
+                       photometry instead of performing a
+                       curve-of-growth analysis
+   :param snr: minimum SNR for sources to be identified
+   :param -solar: the photometric calibration (`pp_calibrate`) is only
+		  using stars with solar-like colors (see
+		  `pp_calibrate` documentation for details)
+   :param images: images to run `pp_stackedphotometry` on
+
+   This function stacks the images provided in the background frame
+   (`skycoadd.fits`) using ``pp_combine``. If the ``-comoving`` option
+   is used, it also creates a combined image in the moving frame of
+   the target provided in the ``OBJECT`` FITS header keyword
+   (resulting in `comove.fits`). The combination method can be set
+   with the ``-clipped`` parameter; the default is a clipped
+   average. Note that while a median combination might produce cleaner
+   images, it does not conserve flux; hence, you are advised not to
+   use the median here. The magnitude zeropoint for the respective
+   filter band (override of header filter information using the
+   ``-filter`` option) is then derived from the `skycoadd.fits` image
+   using ``pp_photometry`` and ``pp_calibrate``. The target photometry
+   is finally extracted using ``pp_distill``.  If the ``-comoving``
+   option is used, the magnitude zeropoint derived from
+   `skycoadd.fits` is applied to `comove.fits`, from which the
+   target's instrumental magnitude is extracted in that case.
 
 .. _Source Extractor: http://www.astromatic.net/software/sextractor
 .. _SCAMP: http://www.astromatic.net/software/scamp
 .. _CDS Vizier: http://vizier.u-strasbg.fr/vizier/
+.. _SWARP: http://www.astromatic.net/software/swarp
