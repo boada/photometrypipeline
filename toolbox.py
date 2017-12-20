@@ -142,12 +142,11 @@ def read_scamp_output():
         idx += 1
 
     # check if data rows have same length as header
-    abort = False
     for i in range(len(data)):
-      if len(headers) != len(data[i]):
-        raise (RuntimeError,
-               ('data and header lists from SCAMP output file have ' 
-                'different lengths for image %s; do the FITS files have the ' 
+        if len(headers) != len(data[i]):
+            raise (RuntimeError,
+               ('data and header lists from SCAMP output file have '
+                'different lengths for image %s; do the FITS files have the '
                 'OBJECT keyword populated?') % data[i][headers['Catalog_Name']])
     return (headers, data)
 
@@ -190,14 +189,18 @@ def get_binning(header, obsparam):
 def skycenter(catalogs, ra_key='ra.deg', dec_key='dec.deg'):
     """derive center position and radius from catalogs"""
 
+    from astropy.coordinates import SkyCoord
     min_ra = min([numpy.min(cat[ra_key]) for cat in catalogs])
     max_ra = max([numpy.max(cat[ra_key]) for cat in catalogs])
     min_dec = min([numpy.min(cat[dec_key]) for cat in catalogs])
     max_dec = max([numpy.max(cat[dec_key]) for cat in catalogs])
 
     ra, dec = old_div((max_ra + min_ra), 2.), old_div((max_dec + min_dec), 2.)
-    rad = numpy.sqrt((old_div((max_ra - min_ra), 2.))**2 + (old_div((
-        max_dec - min_dec), 2.))**2)
+
+    c1 = SkyCoord(ra=max_ra, dec=max_dec, frame='icrs', unit='deg')
+    c2 = SkyCoord(ra=min_ra, dec=min_dec, frame='icrs', unit='deg')
+
+    rad = c1.separation(c2).value / 2
 
     return ra, dec, rad
 
