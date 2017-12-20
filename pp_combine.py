@@ -120,6 +120,14 @@ def combine(filenames, obsparam, comoving, targetname,
     # modify individual frames if comoving == True
     if comoving:
         movingfilenames = []
+
+        # sort filenames by MIDTIMJD
+        mjds = []
+        for filename in filenames:
+            hdulist = fits.open(filename)
+            mjds.append(float(hdulist[0].header['MIDTIMJD']))
+        filenames = [filenames[i] for i in numpy.argsort(mjds)]
+
         for filename in filenames:
             movingfilename = filename[:filename.find('.fits')]+'_moving.fits'
             print('shifting %s -> %s' % (filename, movingfilename))

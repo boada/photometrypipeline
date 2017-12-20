@@ -635,11 +635,14 @@ def add_calibration(data, imagestretch='linear'):
                 + "<TH>Instrumental (mag)</TH><TH>Calibrated (mag)</TH>" \
                 + "<TH>Residual (mag</TH>\n</TR>\n"
         for i, idx in enumerate(dat['zp_usedstars']):
+            name = dat['match'][0][2][idx]
+            if isinstance(name, bytes):
+                name = name.decode('utf8')
             html += ("<TR><TD>%d</TD><TD>%s</TD><TD>%12.8f</TD>" \
                      + "<TD>%12.8f</TD><TD>%.3f+-%.3f</TD>" \
                      + "<TD>%.3f+-%.3f</TD>" \
                      + "<TD>%.3f+-%.3f</TD><TD>%.3f</TD></TR>") % \
-                (i+1, dat['match'][0][2][idx].decode('utf8'),
+                (i+1, name,
                  dat['match'][0][3][idx],
                  dat['match'][0][4][idx], dat['match'][0][0][idx], 
                  dat['match'][0][1][idx],

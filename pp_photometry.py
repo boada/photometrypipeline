@@ -436,7 +436,7 @@ def photometry(filenames, sex_snr, source_minarea, aprad,
 if __name__ == '__main__':
 
     # define command line arguments
-    parser = argparse.ArgumentParser(description='automated WCS registration')
+    parser = argparse.ArgumentParser(description='automated photometry')
     parser.add_argument('-snr', help='sextractor SNR threshold for '+\
                         'photometry catalog', default=2)
     parser.add_argument('-minarea', help='sextractor SNR threshold for '+\
@@ -474,7 +474,7 @@ if __name__ == '__main__':
         telescope = hdu[0].header['TEL_KEYW']
     except KeyError:
         print('ERROR: cannot find telescope keyword in image header;'+\
-            'has this image run through wcs_register?')
+            'has this image run through pp_prepare?')
         sys.exit(0)
     obsparam = _pp_conf.telescope_parameters[telescope]
 

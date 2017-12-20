@@ -99,6 +99,12 @@ if __name__ == '__main__':
     # use current directory as root directory
     rootdir = os.getcwd()
     
+    # check if input filenames is actually a list
+    if len(filenames) == 1:
+        if filenames[0].find('.lst') > -1 or filenames[0].find('.list') > -1:
+            filenames = [filename[:-1] for filename in open(filenames[0], 'r')\
+                         .readlines()]
+  
     ### read telescope and filter information from fits headers
     # check that they are the same for all images
     instruments = []
@@ -113,7 +119,7 @@ if __name__ == '__main__':
     if len(instruments) == 0:
         raise KeyError('cannot identify telescope/instrument; please update'
                        '_pp_conf.instrument_keys accordingly')
-
+    
     # assign telescope parameters (telescopes.py)
     telescope = _pp_conf.instrument_identifiers[instruments[0]]
     obsparam = _pp_conf.telescope_parameters[telescope]

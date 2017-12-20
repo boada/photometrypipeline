@@ -189,16 +189,21 @@ def get_binning(header, obsparam):
 
 def skycenter(catalogs, ra_key='ra.deg', dec_key='dec.deg'):
     """derive center position and radius from catalogs"""
-
-    min_ra = min([numpy.min(cat[ra_key]) for cat in catalogs])
-    max_ra = max([numpy.max(cat[ra_key]) for cat in catalogs])
+    from astropy.coordinates import SkyCoord
+    from astropy import units as u
+    
+    min_ra  = min([numpy.min(cat[ra_key]) for cat in catalogs])
+    max_ra  = max([numpy.max(cat[ra_key]) for cat in catalogs])
     min_dec = min([numpy.min(cat[dec_key]) for cat in catalogs])
     max_dec = max([numpy.max(cat[dec_key]) for cat in catalogs])
+    
+    ra, dec = (max_ra+min_ra)/2, (max_dec+min_dec)/2
 
-    ra, dec = old_div((max_ra + min_ra), 2.), old_div((max_dec + min_dec), 2.)
-    rad = numpy.sqrt((old_div((max_ra - min_ra), 2.))**2 + (old_div((
-        max_dec - min_dec), 2.))**2)
+    lower_left= SkyCoord(ra=min_ra, dec=min_dec, frame='icrs', unit='deg')
+    upper_right = SkyCoord(ra=max_ra, dec=max_dec, frame='icrs', unit='deg')
 
+    rad     = lower_left.separation(upper_right).deg/2
+    
     return ra, dec, rad
 
 ## miscellaneous tools

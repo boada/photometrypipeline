@@ -614,7 +614,7 @@ if __name__ == '__main__':
         telescope = hdulist[0].header['TEL_KEYW']
     except KeyError:
         print('ERROR: cannot find telescope keyword in image header;', \
-            'has this image run through wcs_register?')
+            'has this image run through pp_prepare?')
         sys.exit(0)
     obsparam = _pp_conf.telescope_parameters[telescope]
 

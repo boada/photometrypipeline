@@ -637,7 +637,7 @@ def distill(catalogs, man_targetname, offset, fixed_targets_file, posfile,
                    'mag    sig     source_ra    source_dec   [1]   [2]   ' +
                    '[3]   [4]    [5]       ZP ZP_sig inst_mag ' +
                    'in_sig               [6] [7] [8]    [9]          [10] ' +
-                   'FWHM\n')
+                   'FWHM" APRAD"\n')
 
         for dat in data:
             # sort measured magnitudes by target

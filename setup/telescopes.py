@@ -463,23 +463,26 @@ ca123dlrmkiii_param = {
 
 # Lowell31, NASACAM
 lowell31_param = {
-    'telescope_instrument': 'Lowell31/NASACAM',  # telescope/instrument name
-    'telescope_keyword': 'LOWELL31',  # telescope/instrument keyword
-    'observatory_code': '688',  # MPC observatory code
-    'secpix': (0.456, 0.456),  # pixel size (arcsec)
-    # before binning
-    'ext_coeff': 0.05,  # typical extinction coefficient
-
+    'telescope_instrument' : 'Lowell31/NASACAM', # telescope/instrument name
+    'telescope_keyword'    : 'LOWELL31',      # telescope/instrument keyword
+    'observatory_code'     : '688',         # MPC observatory code
+    'secpix'               : (0.456, 0.456), # pixel size (arcsec)
+                                               # before binning
+    'ext_coeff'            : 0.05,          # typical extinction coefficient
+   
     # image orientation preferences
     'flipx': True,
     'flipy': False,
     'rotate': 270,
 
     # instrument-specific FITS header keywords
-    'binning'              : ('CCDSUM#blank1', 'CCDSUM#blank2'), # binning in x/y
+    #    'binning'              : ('CCDSUM#blank1', 'CCDSUM#blank2'), # binning in x/y
+    'binning'              : (1, 1), # binning in x/y
     'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
-    'ra'                   : 'RA',  # telescope pointing, RA
-    'dec'                  : 'DEC', # telescope pointin, Dec 
+    'ra'                   : 'TELRA',  # telescope pointing, RA
+    'dec'                  : 'TELDEC', # telescope pointin, Dec
+    #'ra'                   : 'RA',  # telescope pointing, RA
+    #'dec'                  : 'DEC', # telescope pointin, Dec
     'radec_separator'      : ':',   # RA/Dec hms separator, use 'XXX'
                                     # if already in degrees
     'date_keyword'         : 'DATE-OBS|UT', # obs date/time

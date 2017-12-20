@@ -514,9 +514,9 @@ class catalog(object):
             self.data.rename_column('e_i_mag', 'e_imag')
 
         elif self.catalogname == 'SDSS-R9':
-            vquery = Vizier(columns=['SDSS9', 'RAJ2000', 'DEJ2000',
-                                     'e_RAJ2000',
-                                     'e_DEJ2000', 'umag', 'e_umag',
+            vquery = Vizier(columns=['SDSS9', 'RA_ICRS', 'DE_ICRS',
+                                     'e_RA_ICRS',
+                                     'e_DE_ICRS', 'umag', 'e_umag',
                                      'gmag', 'e_gmag', 'rmag', 'e_rmag',
                                      'imag', 'e_imag', 'zmag', 'e_zmag'],
                             column_filters={"gmag": ("<%f" % max_mag),
@@ -535,10 +535,10 @@ class catalog(object):
 
             ### rename column names using PP conventions
             self.data.rename_column('SDSS9', 'ident')
-            self.data.rename_column('RAJ2000', 'ra.deg')
-            self.data.rename_column('DEJ2000', 'dec.deg')
-            self.data.rename_column('e_RAJ2000', 'e_ra.deg')
-            self.data.rename_column('e_DEJ2000', 'e_dec.deg')
+            self.data.rename_column('RA_ICRS', 'ra.deg')
+            self.data.rename_column('DE_ICRS', 'dec.deg')
+            self.data.rename_column('e_RA_ICRS', 'e_ra.deg')
+            self.data.rename_column('e_DE_ICRS', 'e_dec.deg')
 
             # perform correction to AB system for SDSS
             # http://www.sdss3.org/dr8/algorithms/fluxcal.php#SDSStoAB
@@ -548,26 +548,26 @@ class catalog(object):
         elif self.catalogname == 'SDSS-R13':
             try:
                 self.data = SDSS.query_region(field,
-                                                radius=("%fd" % rad_deg),
-                                                photoobj_fields=['objID', 'ra',
-                                                                 'dec',
-                                                                 'raErr',
-                                                                 'decErr',
-                                                                 'fiberMag_u',
-                                                                 'fiberMagErr_u',
-                                                                 'fiberMag_g',
-                                                                 'fiberMagErr_g',
-                                                                 'fiberMag_r',
-                                                                 'fiberMagErr_r',
-                                                                 'fiberMag_i',
-                                                                 'fiberMagErr_i',
-                                                                 'fiberMag_z',
-                                                                 'fiberMagErr_z',
-                                                                 'mode',
-                                                                 'clean',
-                                                                 'type'],
+                                    radius=("%fd" % rad_deg),
+                                    photoobj_fields=['objID', 'ra',
+                                                     'dec',
+                                                     'raErr',
+                                                     'decErr',
+                                                     'fiberMag_u',
+                                                     'fiberMagErr_u',
+                                                     'fiberMag_g',
+                                                     'fiberMagErr_g',
+                                                     'fiberMag_r',
+                                                     'fiberMagErr_r',
+                                                     'fiberMag_i',
+                                                     'fiberMagErr_i',
+                                                     'fiberMag_z',
+                                                     'fiberMagErr_z',
+                                                     'mode',
+                                                     'clean',
+                                                     'type'],
                                               timeout=180,
-                                             data_release=13)
+                                              data_release=13)
             except IndexError:
                 if self.display:
                     print('no data available from %s' % self.catalogname)
@@ -762,7 +762,9 @@ class catalog(object):
 
         # # combine HDUs and write file
         hdulist = fits.HDUList([primaryhdu, hdrhdu, datahdu])
-        if float(astropyversion.split('.')[1]) >= 3:
+        if float(astropyversion.split('.')[0]) > 1:
+            hdulist.writeto(ldac_filename, overwrite=True)            
+        elif float(astropyversion.split('.')[1]) >= 3:
             hdulist.writeto(ldac_filename, overwrite=True)
         else:
             hdulist.writeto(ldac_filename, clobber=True)
@@ -953,6 +955,11 @@ class catalog(object):
         if len(self.data) == 0:
             return 0
 
+        # check if this specific transformation has already been done
+        if '_'+targetfilter+'mag' in self.fields:
+            logging.info(targetfilter + ' already available')
+            return self.shape[0]
+        
         ### SDSS to BVRI
         ### transformations based on Chonis & Gaskell 2008, AJ, 135 
         if (('SDSS' in self.catalogname) and 
@@ -1056,10 +1063,11 @@ class catalog(object):
             # get rid of sources that have not been transformed
             self.data = self.data[keep]
 
-            self.catalogname  += '_transformed'
-            self.history += ', %d transformed to %s (Vega)' % \
-                            (self.shape[0], targetfilter)
-            self.magsystem = 'AB (ugriz), Vega (%s)' % targetfilter
+            if '_transformed' not in self.catalogname:
+                self.catalogname  += '_transformed'
+                self.history += ', %d transformed to %s (Vega)' % \
+                                (self.shape[0], targetfilter)
+                self.magsystem = 'AB (ugriz), Vega (%s)' % targetfilter
 
             logging.info(('%d sources sucessfully transformed to %s' %
                           (self.shape[0], targetfilter)))
@@ -1112,11 +1120,12 @@ class catalog(object):
             # get rid of sources that have not been transformed
             self.data = self.data[keep_idc]
 
-            self.catalogname  += '_transformed'
-            self.history += ', %d transformed to %s (Vega)' % \
+            if '_transformed' not in self.catalogname:
+                self.catalogname  += '_transformed'
+                self.history += ', %d transformed to %s (Vega)' % \
                             (self.shape[0], targetfilter)
-            self.magsystem = 'Vega'
-
+                self.magsystem = 'Vega'
+            
             logging.info('%d sources sucessfully transformed to %s' % \
                          (self.shape[0], targetfilter))
 
@@ -1194,10 +1203,11 @@ class catalog(object):
             # get rid of sources that have not been transformed
             self.data = self.data[self['_Zmag'] < 99]
 
-            self.catalogname  += '_transformed'
-            self.history += ', %d transformed to UKIRT YZJHK (Vega)' %\
-                            self.shape[0]
-            self.magsystem = 'Vega'
+            if '_transformed' not in self.catalogname:            
+                self.catalogname  += '_transformed'
+                self.history += ', %d transformed to UKIRT YZJHK (Vega)' %\
+                                self.shape[0]
+                self.magsystem = 'Vega'
 
             logging.info('%d sources sucessfully transformed to UKIRT YZJHK' % \
                          self.shape[0])
@@ -1243,10 +1253,11 @@ class catalog(object):
             self.data.add_column(Column(data=Ierr, name='_e_Imag',
                                         unit=u.mag))
 
-            self.catalogname  += '_transformed'
-            self.history += ', %d transformed to %s (Vega)' % \
-                            (self.shape[0], targetfilter)
-            self.magsystem = 'Vega'
+            if '_transformed' not in self.catalogname:            
+                self.catalogname  += '_transformed'
+                self.history += ', %d transformed to %s (Vega)' % \
+                                (self.shape[0], targetfilter)
+                self.magsystem = 'Vega'
 
             logging.info('%d sources sucessfully transformed to %s' % \
                          (self.shape[0], targetfilter))
@@ -1294,10 +1305,11 @@ class catalog(object):
             self.data.add_column(Column(data=zerr_sdss, name='_e_zmag',
                                         unit=u.mag))
 
-            self.catalogname  += '_transformed'
-            self.history += ', %d transformed to %s (AB)' % \
-                            (self.shape[0], targetfilter)
-            self.magsystem = 'AB'
+            if '_transformed' not in self.catalogname:            
+                self.catalogname  += '_transformed'
+                self.history += ', %d transformed to %s (AB)' % \
+                                (self.shape[0], targetfilter)
+                self.magsystem = 'AB'
 
             logging.info('%d sources sucessfully transformed to %s' % \
                          (self.shape[0], targetfilter))

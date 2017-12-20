@@ -277,19 +277,20 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         header['SECPIXY'] = (obsparam['secpix'][1]*binning[1],
                              'PP: y pixscale after binning')
 
-        # create observation midtime jd
-        if obsparam['date_keyword'].find('|') == -1:
-            header['MIDTIMJD'] = \
-                (toolbox.dateobs_to_jd(header[obsparam['date_keyword']]) +
-                 float(header[obsparam['exptime']])/2./86400.,
-                 'PP: obs midtime')
-        else:
-            datetime = header[obsparam['date_keyword'].split('|')[0]] + 'T' + \
-                       header[obsparam['date_keyword'].split('|')[1]]
-            datetime = datetime.replace('/', '-')
-            header['MIDTIMJD'] = (toolbox.dateobs_to_jd(datetime) +
-                                  float(header[obsparam['exptime']])/2./86400.,
-                                  'PP: obs midtime')
+        # create observation midtime jd 
+        if not keep_wcs or 'MIDTIMJD' not in header:
+            if obsparam['date_keyword'].find('|') == -1:
+                header['MIDTIMJD'] = \
+                    (toolbox.dateobs_to_jd(header[obsparam['date_keyword']]) +
+                     float(header[obsparam['exptime']])/2./86400.,
+                     'PP: obs midtime')
+            else:
+                datetime = (header[obsparam['date_keyword'].split('|')[0]] +
+                        'T' + header[obsparam['date_keyword'].split('|')[1]])
+                datetime = datetime.replace('/', '-')
+                header['MIDTIMJD'] = (toolbox.dateobs_to_jd(datetime) +
+                                float(header[obsparam['exptime']])/2./86400.,
+                                      'PP: obs midtime')
 
         # other keywords
         header['TELINSTR'] = (obsparam['telescope_instrument'],
