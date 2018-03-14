@@ -261,7 +261,7 @@ if __name__ == '__main__':
         source_minarea = obsparam['source_minarea']
         background_only = False
         target_only = False
-
+        
         print('\n----- use skycoadd optimum photometry aperture (%4.2f)\n' %
               aprad)
         phot = pp_photometry.photometry(['comove.fits'], snr, source_minarea,

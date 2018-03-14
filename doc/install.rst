@@ -126,11 +126,11 @@ Install extra python modules in Anaconda::
 
 Install SExtractor::
 
-  brew install homebrew/science/sextractor
+  brew install brewsci/science/sextractor
 
 Install SCAMP::
 
-  brew install homebrew/science/scamp
+  brew install brewsci/science/scamp
 
 Install extra software::
 

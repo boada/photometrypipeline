@@ -170,7 +170,7 @@ def combine(filenames, obsparam, comoving, targetname,
                 if obsparam['radec_separator'] == 'XXX':
                     ra_deg = float(header[obsparam['ra']])
                     dec_deg = float(header[obsparam['dec']])    
-                    if telescope == 'UKIRTWFCAM':
+                    if obsparam['telescope_keyword'] == 'UKIRTWFCAM':
                         ra_deg = ra_deg/24.*360. - 795/3600.
                         dec_deg -= 795/3600.
                 else:
