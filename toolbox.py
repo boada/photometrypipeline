@@ -42,18 +42,18 @@ if sys.version_info > (3, 0):
 
 
 def jd_to_gregorian(jd, is_mjd=False):
-  """ convert a julian date into a gregorian data """
-  if is_mjd:
-      mjd = jd
-  else:
-      mjd = jd -2400000.5
+    """ convert a julian date into a gregorian data """
+    if is_mjd:
+        mjd = jd
+    else:
+        mjd = jd -2400000.5
 
-  MJD0 = 2400000.5 # 1858 November 17, 00:00:00 hours
+    MJD0 = 2400000.5 # 1858 November 17, 00:00:00 hours
 
-  modf = math.modf
-  a = int(mjd+MJD0+0.5)
-  b = int(old_div((a-1867216.25),36524.25))
-  c = a+ b - int(modf(old_div(b,4))[1]) + 1525
+    modf = math.modf
+    a = int(mjd+MJD0+0.5)
+    b = int(old_div((a-1867216.25),36524.25))
+    c = a+ b - int(modf(old_div(b,4))[1]) + 1525
 
     d = int(old_div((c - 122.1), 365.25))
     e = 365 * d + int(modf(old_div(d, 4))[1])
