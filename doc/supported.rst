@@ -38,6 +38,8 @@ observatories/instruments:
 +--------------------------+--------------------+----------------+
 | Lowell 42"               | NASA42             | LOWELL42       |
 +--------------------------+--------------------+----------------+
+| Lowell 42"               | SITE               | LOWELL42SITE   |
++--------------------------+--------------------+----------------+
 | Magellan                 | IMACS              | MAGIMACS       |
 +--------------------------+--------------------+----------------+
 | Observatoire Haute-      | CCD                | OHP120         |
@@ -111,6 +113,10 @@ photometric calibration:
 | (`PANSTARRS`_)         |                          |               | B*, V*, R*, I* (Vega)    | currently, only cone searches with radius < 0.5 deg        |
 |                        |                          |               |                          | supported                                                  |
 +------------------------+--------------------------+---------------+--------------------------+------------------------------------------------------------+
+| SkyMapper DR1          | photometric              | no            | u, v, g, r, i, z         | good coverage in the Southern hemisphere                   | 
+| (`SkyMapper`_)         |                          |               | (SDSS AB)                |                                                            |
+|                        |                          |               |                          |                                                            |
++------------------------+--------------------------+---------------+--------------------------+------------------------------------------------------------+
 
 The catalog name in brackets is the identifier used by PP; e.g., if
 you want to use URAT-1 for the registration of your images, use option
@@ -151,5 +157,7 @@ Independent checks indicate that these transformations are reliable and accurate
 .. _SDSS-R9: http://www.sdss3.org/dr9/
 .. _APASS9: http://www.aavso.org/apass
 .. _PANSTARRS: http://panstarrs.stsci.edu/
+.. _SkyMapper: http://skymapper.anu.edu.au
+
 
 .. _WCSTools: http://tdc-www.harvard.edu/wcstools/

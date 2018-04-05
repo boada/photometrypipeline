@@ -26,8 +26,8 @@ import sys
 try:
     from past.utils import old_div
 except ImportError:
-    print('Module future not found. Please install with: pip install future')
-    sys.exit()
+  print('Module future not found. Please install with: pip install future')
+  sys.exit()
 
 import math
 import numpy
@@ -42,18 +42,18 @@ if sys.version_info > (3, 0):
 
 
 def jd_to_gregorian(jd, is_mjd=False):
-    """ convert a julian date into a gregorian data """
-    if is_mjd:
-        mjd = jd
-    else:
-        mjd = jd - 2400000.5
+  """ convert a julian date into a gregorian data """
+  if is_mjd:
+      mjd = jd
+  else:
+      mjd = jd -2400000.5
 
-    MJD0 = 2400000.5  # 1858 November 17, 00:00:00 hours
+  MJD0 = 2400000.5 # 1858 November 17, 00:00:00 hours
 
-    modf = math.modf
-    a = int(mjd + MJD0 + 0.5)
-    b = int(old_div((a - 1867216.25), 36524.25))
-    c = a + b - int(modf(old_div(b, 4))[1]) + 1525
+  modf = math.modf
+  a = int(mjd+MJD0+0.5)
+  b = int(old_div((a-1867216.25),36524.25))
+  c = a+ b - int(modf(old_div(b,4))[1]) + 1525
 
     d = int(old_div((c - 122.1), 365.25))
     e = 365 * d + int(modf(old_div(d, 4))[1])
@@ -81,7 +81,12 @@ def dateobs_to_jd(date):
         date = date.split(' ')
     time = date[1].split(':')
     date = date[0].split('-')
-    a = (14 - float(date[1])) // 12
+
+    # check if date is yyyy-mm-dd or dd-mm-yyyy
+    if len(date[2]) == 4 and len(date[0]) < 3:
+        date = date[::-1]
+
+    a = (14 - float(date[1]))//12
     y = float(date[0]) + 4800 - a
     m = float(date[1]) + 12 * a - 3
     return float(date[2]) + ((153*m + 2)//5) + 365*y + y//4 - y//100 \
@@ -90,19 +95,18 @@ def dateobs_to_jd(date):
 
 
 def jd_to_fractionalyear(jd, is_mjd=False):
-    """ convert a julian date into a fractional year, e.g., 2000.123456 """
-    if is_mjd:
-        jd += 2400000.5
-    date = jd_to_gregorian(jd)
-    year = date[0] + old_div(date[1], 12.) + old_div(date[2], 365.) + old_div(
-        date[3], 8760.) + old_div(date[4], 525600.)
-    return year
+  """ convert a julian date into a fractional year, e.g., 2000.123456 """
+  if is_mjd:
+      jd += 2400000.5
+  date = jd_to_gregorian(jd)
+  year = date[0]+old_div(date[1],12.)+old_div(date[2],365.)+old_div(date[3],8760.)+old_div(date[4],525600.)
+  return year
 
 
 def fractionalyear_to_jd(date):
-    """ convert a fractional year into a julian date """
-    jd_jan1 = dateobs_to_jd('%4d-01-01T00:00:00' % math.floor(date))
-    return jd_jan1 + 365 * (date - math.floor(date))
+  """ convert a fractional year into a julian date """
+  jd_jan1 = dateobs_to_jd('%4d-01-01T00:00:00' % math.floor(date))
+  return jd_jan1 + 365*(date-math.floor(date))
 
 ### ASTROMATIC tools
 
@@ -146,8 +150,8 @@ def read_scamp_output():
     for i in range(len(data)):
       if len(headers) != len(data[i]):
         raise (RuntimeError,
-               ('data and header lists from SCAMP output file have ' 
-                'different lengths for image %s; do the FITS files have the ' 
+               ('data and header lists from SCAMP output file have '
+                'different lengths for image %s; do the FITS files have the '
                 'OBJECT keyword populated?') % data[i][headers['Catalog_Name']])
     return (headers, data)
 
@@ -191,19 +195,19 @@ def skycenter(catalogs, ra_key='ra.deg', dec_key='dec.deg'):
     """derive center position and radius from catalogs"""
     from astropy.coordinates import SkyCoord
     from astropy import units as u
-    
+
     min_ra  = min([numpy.min(cat[ra_key]) for cat in catalogs])
     max_ra  = max([numpy.max(cat[ra_key]) for cat in catalogs])
     min_dec = min([numpy.min(cat[dec_key]) for cat in catalogs])
     max_dec = max([numpy.max(cat[dec_key]) for cat in catalogs])
-    
+
     ra, dec = (max_ra+min_ra)/2, (max_dec+min_dec)/2
 
     lower_left= SkyCoord(ra=min_ra, dec=min_dec, frame='icrs', unit='deg')
     upper_right = SkyCoord(ra=max_ra, dec=max_dec, frame='icrs', unit='deg')
 
     rad     = lower_left.separation(upper_right).deg/2
-    
+
     return ra, dec, rad
 
 ## miscellaneous tools

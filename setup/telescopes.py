@@ -591,6 +591,75 @@ lowell42_param = {
     'photometry_catalogs': ['SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
 }
 
+# Lowell42, SITE
+lowell42site_param = {
+    'telescope_instrument' : 'Lowell42/SITE', # telescope/instrument name
+    'telescope_keyword'    : 'LOWELL42SITE',      # telescope/instrument keyword
+    'observatory_code'     : '688',         # MPC observatory code
+    'secpix'               : (0.6, 0.6), # pixel size (arcsec)
+                                               # before binning
+    'ext_coeff'            : 0.05,          # typical extinction coefficient
+
+
+    # image orientation preferences
+    'flipx'                : True,
+    'flipy'                : True,
+    'rotate'               : 0,
+
+    # instrument-specific FITS header keywords
+    'binning'              : ('CCDSUM#blank1', 'CCDSUM#blank2'),
+                           # binning in x/y, '_blankN' denotes that both axes
+                           # are listed in one keyword, sep. by blanks
+    'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra'                   : 'RA',  # telescope pointing, RA
+    'dec'                  : 'DEC', # telescope pointin, Dec
+    'radec_separator'      : ':',   # RA/Dec hms separator, use 'XXX'
+                                    # if already in degrees
+    'date_keyword'         : 'DATE-OBS|UT', # obs date/time
+                                                  # keyword; use
+                                                  # 'date|time' if
+                                                  # separate
+    'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object'               : 'OBJECT',  # object name keyword
+    'filter'               : 'FILTNAME',  # filter keyword
+    'filter_translations'  : {'R': 'R', 'I': 'I', 'V': 'V'},
+                             # filtername translation dictionary
+    'exptime'              : 'EXPTIME', # exposure time keyword (s)
+    'airmass'              : 'AIRMASS', # airmass keyword
+
+
+    # source extractor settings
+    'source_minarea'       : 12, # default sextractor source minimum N_pixels
+    'source_snr': 3, # default sextractor source snr for registration
+    'aprad_default'        : 5, # default aperture radius in px
+    'aprad_range'          : [2, 10], # [minimum, maximum] aperture radius (px)
+    'sex-config-file'      : rootpath+'/setup/lowell42.sex',
+    'mask_file'            : {},
+    #                        mask files as a function of x,y binning
+
+    # registration settings (Scamp)
+    'scamp-config-file'    : rootpath+'/setup/lowell42.scamp',
+    'reg_max_mag'          : 19,
+    'reg_search_radius'    : 0.5, # deg
+    'source_tolerance': 'high',
+
+    # swarp settings
+    'copy_keywords'        : ('TELESCOP,INSTRUME,CCDSUM,FILTNAME,EXPTIME,'+
+                              'OBJECT,' +
+                              'DATE-OBS,UT,RA,DEC,PIXSCAL,AIRMASS,' +
+                              'TEL_KEYW'),
+    #                         keywords to be copied in image
+    #                         combination using swarp
+    'swarp-config-file'    : rootpath+'/setup/lowell42.swarp',
+
+    # default catalog settings
+    'astrometry_catalogs'  : ['GAIA'],
+    'photometry_catalogs'  : ['SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
+}
+
+
 # Lowell72 (Perkins), PRISM
 lowell72_param = {
     'telescope_instrument': 'Lowell72/PRISM',  # telescope/instrument name
@@ -2022,7 +2091,7 @@ ukirtwfcam_param = {
     'copy_keywords'        : ('TELESCOP,INSTRUME,FILTER,EXP_TIME,PROJECT,'+
                               'AIRMASS,OBJECT,DATE-OBS,MJD-OBS,GAIN,'+
                               'READNOIS,TELRA,TELDEC,SECPIX1,SECPIX2,'+
-                              'CAMNUM,MIDTIMJD,TEL_KEYW'),
+                              'CAMNUM,MIDTIMJD,TEL_KEYW,AMSTART'),
     #                         keywords to be copied in image
     #                         combination using swarp
     'swarp-config-file'    : rootpath+'/setup/ukirtwfcam.swarp',
@@ -2187,12 +2256,9 @@ implemented_telescopes = ['VATT4K',
                           'SOARGOODMAN',
                           'OHP120',
                           #'SL74SAH',
-                          'FROST',
-                          'TNGDOLORES',
-                          'GENERIC',
-                          'KPNO4MOS1',
-                          'KPNO4NEWF'
-                          'SALTSALTICAM']
+                          'TNGDOLORES', 'GENERIC', 'KPNO4MOS1', 'FROST',
+                          'MEXMAN', 'KPNO4MOS1', 'KPNOMOS3',
+                          'KPNO4NEWF', 'UKIRTWFCAM', 'VLTFORS2', 'LOWELL42SITE']
 
 # translate INSTRUME (or others, see _pp_conf.py) header keyword into
 # PP telescope keyword
@@ -2231,7 +2297,8 @@ instrument_identifiers = {'= "Vatt4k"': 'VATT4K',
                           'WFCAM': 'UKIRTWFCAM',
                           'SIRIUS': 'IRSFSIRIUS',
                           'Goodman Spectro': 'SOARGOODMAN',
-                          'FORS2': 'VLTFORS2'
+                          'FORS2': 'VLTFORS2',
+                          '2:1 f/17 direct' : 'LOWELL42SITE'
 }
 
 # translate telescope keyword into parameter set defined here
@@ -2263,7 +2330,8 @@ telescope_parameters = {'VATT4K': vatt4k_param,
                         'KPNO4NEWF': kpno4newf_param,
                         'UKIRTWFCAM': ukirtwfcam_param,
                         'IRSFSIRIUS': irsfsirius_param,
-                        'VLTFORS2': vltfors2_param
+                        'VLTFORS2': vltfors2_param,
+                        'LOWELL42SITE': lowell42site_param
 }
 
 #### append mytelescopes.py, if available

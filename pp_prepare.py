@@ -33,24 +33,19 @@ import numpy
 import os
 import re
 import sys
-import shutil
 import logging
-import subprocess
 import argparse
-import shlex
-import time
-try:
-    import callhorizons
-except ImportError:
-    print('Module callhorizons not found. Please install with: pip install '
-          'callhorizons')
-    sys.exit()
+#try:
+#    import callhorizons
+#except ImportError:
+#    print('Module callhorizons not found. Please install with: pip install '
+#          'callhorizons')
+#    sys.exit()
 from astropy.io import fits
 
 # pipeline-specific modules
 import _pp_conf
 from catalog import *
-import pp_extract
 import diagnostics as diag
 import toolbox
 
@@ -101,7 +96,7 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                       'extract individual extensions and run them '
                       'individually.')
         sys.exit()
-    
+
     # keywords that have to be implanted into each image
     implants = {}
 
@@ -225,7 +220,7 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         header['PHOTFLAG'] = ('F', 'PP: data is not photometric (SCAMP)')
         header['PHOT_K'] = (0.05, 'PP: assumed extinction coefficient')
 
-        
+
         if not keep_wcs:
 
             # remove keywords that might collide with fake wcs
@@ -262,7 +257,7 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                     header['CUNIT2'] = ('deg')
             except KeyError:
                 pass
-                    
+
             # if GENERIC telescope, add implants to header
             if obsparam['telescope_keyword'] is 'GENERIC':
                 for key, val in list(implants.items()):
@@ -277,7 +272,7 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         header['SECPIXY'] = (obsparam['secpix'][1]*binning[1],
                              'PP: y pixscale after binning')
 
-        # create observation midtime jd 
+        # create observation midtime jd
         if not keep_wcs or 'MIDTIMJD' not in header:
             if obsparam['date_keyword'].find('|') == -1:
                 header['MIDTIMJD'] = \
@@ -297,6 +292,8 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                               'PP: tel/instr name')
         header['TEL_KEYW'] = (obsparam['telescope_keyword'],
                               'PP: tel/instr keyword')
+
+        header[obsparam['filter']] = header[obsparam['filter']].strip()
         header['FILTER'] = (header[obsparam['filter']], 'PP:copied')
         header['EXPTIME'] = (header[obsparam['exptime']], 'PP: copied')
         if obsparam['airmass'] in header:
@@ -315,7 +312,7 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         header['FILTER'] = (header[obsparam['filter']], 'PP:copied')
 
 
-            
+
         # perform header update
         for key, value in list(header_update.items()):
             if key in header:
@@ -328,7 +325,7 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
             header['OBJECT'] = 'None'
         elif len(header['OBJECT'].strip()) == 0:
             header['OBJECT'] = 'None'
-            
+
         # # check if RA, Dec, airmass headers are available;
         # #   else: query horizons
         # # to get approximate information
@@ -364,7 +361,7 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
 
         # add fake wcs information that is necessary to run SCAMP
 
-        
+
         # read out ra and dec from header
         if obsparam['radec_separator'] == 'XXX':
             ra_deg = float(header[obsparam['ra']])
@@ -395,17 +392,21 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                 ra_deg = coo.ra.deg
                 dec_deg = coo.dec.deg
                 header['EQUINOX'] = (2000.0, 'PP: normalized to ICRS')
-                
+
         if man_ra is not None and man_dec is not None:
             ra_deg = float(man_ra)
             dec_deg = float(man_dec)
 
         # special treatment for UKIRT/WFCAM
         if obsparam['telescope_keyword'] == 'UKIRTWFCAM':
-            ra_deg = (float(header['TELRA'])/24.*360. -
-                      old_div(float(header['JITTER_X']), 3600.))
-            dec_deg = (float(header['TELDEC']) -
-                       old_div(float(header['JITTER_Y']), 3600.))
+            try:
+                ra_deg = (float(header['TELRA'])/24.*360. -
+                          old_div(float(header['JITTER_X']), 3600.))
+                dec_deg = (float(header['TELDEC']) -
+                           old_div(float(header['JITTER_Y']), 3600.))
+            except KeyError:
+                # JITTER keywords not in combined images
+                pass
 
         # apply flips
         xnorm, ynorm = 1, 1
@@ -456,7 +457,7 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                                 '%s %s') % (obsparam['distort']['functionof'],
                                             header[obsparam['distort']
                                                    ['functionof']]))
-        
+
             header['CD1_1'] = (xnorm * numpy.cos(this_rotate/180.*numpy.pi) *
                                obsparam['secpix'][0]*binning[0]/3600.,
                                'PP: fake Coordinate matrix')
@@ -557,7 +558,7 @@ if __name__ == '__main__':
             telescope = 'GENERIC'
 
     obsparam = _pp_conf.telescope_parameters[telescope]
-    
+
     header_update = {}
     if man_target is not None:
         header_update[obsparam['object']] = man_target

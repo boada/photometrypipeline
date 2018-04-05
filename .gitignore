@@ -16,6 +16,7 @@ ppident_variablestars*
 __pycache__/
 *.py[cod]
 *$py.class
+.eric6project/
 
 # results stuff
 *.db

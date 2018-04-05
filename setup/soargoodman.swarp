@@ -74,7 +74,7 @@ SATLEV_DEFAULT         50000.0         # Default saturation if no FITS keyword
  
 #--------------------------- Background subtraction ---------------------------
  
-SUBTRACT_BACK          N               # Subtraction sky background (Y/N)?
+SUBTRACT_BACK          Y               # Subtraction sky background (Y/N)?
                                        # (all or for each image)
  
 BACK_TYPE              AUTO            # AUTO or MANUAL

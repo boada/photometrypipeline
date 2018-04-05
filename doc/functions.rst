@@ -408,8 +408,8 @@ Functions that provide additional functionality:
    
 .. function:: pp_combine ([-comoving], [-targetname str],
 	      [-manual_rates float, float],
-	      [-method {average, median, clipped}], [-keep_files],
-	      images)
+	      [-method {average, median, clipped}], [-backsub],
+	      [-keep_files], images)
 
    image combination
 
@@ -425,6 +425,8 @@ Functions that provide additional functionality:
                         Dec
    :param method: image combination method: [average, median, clipped]
                   as provided by `SWARP`_
+   :param backsub: if used, the background will be subtracted from each
+		   frame prior to image combination
    :param keep_files: if used, intermediate files are not deleted
    :param images: images to run `pp_manident` on
 

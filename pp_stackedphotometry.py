@@ -92,7 +92,7 @@ if __name__ == '__main__':
     man_filtername = args.filter
     combinemethod = args.method
     fixed_aprad = float(args.fixed_aprad)
-    snr = args.snr
+    snr = float(args.snr)
     solar = args.solar
     filenames = args.images
 

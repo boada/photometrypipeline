@@ -55,6 +55,7 @@ def setup_diagnostics():
     return (dataroot, diagroot, index_filename,
             reg_filename, cal_filename, res_filename)
 
+
 # suppress runtime and astropy warnings
 warnings.simplefilter(action="ignore", category=RuntimeWarning)
 warnings.filterwarnings('ignore', category=wcs.FITSFixedWarning)
@@ -119,7 +120,7 @@ else:
 
 # list of available catalogs
 allcatalogs = ['URAT-1', '2MASS', 'SDSS-R9', 'SDSS-R13', 'APASS9', 'GAIA',
-               'PANSTARRS', 'TGAS']
+               'PANSTARRS', 'TGAS', 'SkyMapper']
 
 # catalog magnitude systems
 allcatalogs_magsys = {'URAT-1': 'Vega',
@@ -129,7 +130,8 @@ allcatalogs_magsys = {'URAT-1': 'Vega',
                       'APASS9': 'Vega',
                       'GAIA': 'Vega',
                       'PANSTARRS': 'AB',
-                      'TGAS': 'Vega'}
+                      'TGAS': 'Vega',
+                      'SkyMapper': 'AB'}
 
 # ---- pipeline preferences
 # (if you don't know what you're doing, better don't mess around here)
@@ -170,5 +172,4 @@ solcol = 0.2
 
 # photometry flavor ['APER', 'ISOCOR', 'AUTO']
 photmode = 'APER'
-## don't change this unless you understand what you are doing
-
+# don't change this unless you understand what you are doing

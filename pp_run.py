@@ -403,7 +403,7 @@ if __name__ == '__main__':
                 os.chdir(root)
 
                 run_the_pipeline(filenames, man_targetname, man_filtername,
-                                 fixed_aprad, source_tolerance)
+                                 fixed_aprad, source_tolerance, solar)
                 os.chdir(_masterroot_directory)
             else:
                 print('\n NOTHING TO DO IN %s' % root)

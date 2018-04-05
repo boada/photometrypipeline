@@ -4,7 +4,7 @@
     v1.0: 2017-10-03, michael.mommert@nau.edu
 """
 from __future__ import print_function, division
-                        
+
 # Photometry Pipeline
 # Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
 
@@ -30,47 +30,46 @@ import shutil
 import callhorizons
 import logging
 import subprocess
-import argparse, shlex
+import argparse
+import shlex
 import time
 from astropy.io import fits
 from past.utils import old_div
 
-### pipeline-specific modules
+# pipeline-specific modules
 import _pp_conf
 import toolbox
 
 # create a portable DEVNULL
 # necessary to prevent subprocess.PIPE and STDOUT from clogging if
-# Source Extractor runs for too long 
+# Source Extractor runs for too long
 try:
-    from subprocess import DEVNULL # Py3
+    from subprocess import DEVNULL  # Py3
 except ImportError:
-    import os # Py2
+    import os  # Py2
     DEVNULL = open(os.devnull, 'wb')
 
 # only import if Python3 is used
-if sys.version_info > (3,0):
+if sys.version_info > (3, 0):
     from builtins import str
 
 # setup logging
-logging.basicConfig(filename = _pp_conf.log_filename,
-                    level    = _pp_conf.log_level,
-                    format   = _pp_conf.log_formatline,
-                    datefmt  = _pp_conf.log_datefmt)
-
+logging.basicConfig(filename=_pp_conf.log_filename,
+                    level=_pp_conf.log_level,
+                    format=_pp_conf.log_formatline,
+                    datefmt=_pp_conf.log_datefmt)
 
 
 def combine(filenames, obsparam, comoving, targetname,
-            manual_rates, combine_method, keep_files, display=True,
-            diagnostics=True):
-
+            manual_rates, combine_method, keep_files,
+            backsub=False, display=True, diagnostics=True):
     """
     image combination wrapper
     output: diagnostic properties
     """
-    
+
     # start logging
-    logging.info('starting image combination with parameters: %s' % \
+    logging.info('starting image combination with parameters: %s' %
                  (', '.join([('%s: %s' % (var, str(val))) for
                              var, val in list(locals().items())])))
 
@@ -90,7 +89,7 @@ def combine(filenames, obsparam, comoving, targetname,
     # read out ra and dec from header
     if obsparam['radec_separator'] == 'XXX':
         ref_ra_deg = float(header[obsparam['ra']])
-        ref_dec_deg = float(header[obsparam['dec']])    
+        ref_dec_deg = float(header[obsparam['dec']])
         if obsparam['telescope_keyword'] == 'UKIRTWFCAM':
             ref_ra_deg = ref_ra_deg/24.*360. - 795/3600.
             ref_dec_deg -= 795/3600.
@@ -100,23 +99,23 @@ def combine(filenames, obsparam, comoving, targetname,
         dec_string = header[obsparam['dec']].split(
             obsparam['radec_separator'])
         ref_ra_deg = 15.*(float(ra_string[0]) +
-                      old_div(float(ra_string[1]), 60.) +
-                      old_div(float(ra_string[2]), 3600.))
+                          old_div(float(ra_string[1]), 60.) +
+                          old_div(float(ra_string[2]), 3600.))
         ref_dec_deg = (abs(float(dec_string[0])) +
-                   old_div(float(dec_string[1]), 60.) +
-                   old_div(float(dec_string[2]), 3600.))
+                       old_div(float(dec_string[1]), 60.) +
+                       old_div(float(dec_string[2]), 3600.))
         if dec_string[0].find('-') > -1:
             ref_dec_deg = -1 * ref_dec_deg
 
     if obsparam['telescope_keyword'] == 'UKIRTWFCAM':
         ref_ra_deg = ref_ra_deg/24.*360.
-    
+
     if obsparam['telescope_keyword'] == "UKIRTWFCAM":
         ref_ra_deg -= float(header['TRAOFF'])/3600
         ref_dec_deg -= float(header['TDECOFF'])/3600
 
     hdulist.close()
-  
+
     # modify individual frames if comoving == True
     if comoving:
         movingfilenames = []
@@ -132,7 +131,7 @@ def combine(filenames, obsparam, comoving, targetname,
             movingfilename = filename[:filename.find('.fits')]+'_moving.fits'
             print('shifting %s -> %s' % (filename, movingfilename))
             logging.info('shifting %s -> %s' % (filename, movingfilename))
-            
+
             # read out date and pointing information
             hdulist = fits.open(filename)
             header = hdulist[0].header
@@ -153,7 +152,7 @@ def combine(filenames, obsparam, comoving, targetname,
                     n = None
 
                 if n is None or n == 0:
-                    logging.warning('WARNING: No position from Horizons!'+\
+                    logging.warning('WARNING: No position from Horizons!' +
                                     'Name (%s) correct?' % targetname)
                     logging.warning('HORIZONS call: %s' % eph.url)
                     raise(ValueError, 'no Horizons ephemerides available')
@@ -165,11 +164,10 @@ def combine(filenames, obsparam, comoving, targetname,
 
                     target_ra, target_dec = eph[0]['RA'], eph[0]['DEC']
 
-                    
                 # get image pointing from header
                 if obsparam['radec_separator'] == 'XXX':
                     ra_deg = float(header[obsparam['ra']])
-                    dec_deg = float(header[obsparam['dec']])    
+                    dec_deg = float(header[obsparam['dec']])
                     if obsparam['telescope_keyword'] == 'UKIRTWFCAM':
                         ra_deg = ra_deg/24.*360. - 795/3600.
                         dec_deg -= 795/3600.
@@ -182,63 +180,62 @@ def combine(filenames, obsparam, comoving, targetname,
                                   old_div(float(ra_string[1]), 60.) +
                                   old_div(float(ra_string[2]), 3600.))
                     dec_deg = (abs(float(dec_string[0])) +
-                                   old_div(float(dec_string[1]), 60.) +
-                                   old_div(float(dec_string[2]), 3600.))
+                               old_div(float(dec_string[1]), 60.) +
+                               old_div(float(dec_string[2]), 3600.))
                     if dec_string[0].find('-') > -1:
                         dec_deg = -1 * dec_deg
-        
+
                 if filename == filenames[0]:
                     ref_offset_ra = target_ra - ref_ra_deg
                     ref_offset_dec = target_dec - ref_dec_deg
-        
+
                 offset_ra = target_ra - ref_ra_deg - ref_offset_ra
                 offset_dec = target_dec - ref_dec_deg - ref_offset_dec
 
             else:
                 # use manual rates (since they are provided)
-                offset_ra = ((float(header['MIDTIMJD'])-refdate)*86400*
+                offset_ra = ((float(header['MIDTIMJD'])-refdate)*86400 *
                              float(manual_rates[0]))/3600
-                offset_dec = ((float(header['MIDTIMJD'])-refdate)*86400*
+                offset_dec = ((float(header['MIDTIMJD'])-refdate)*86400 *
                               float(manual_rates[1]))/3600
-                
+
             logging.info('offsets in RA and Dec: %f, %f arcsec' %
                          (offset_ra*3600, offset_dec*3600))
-                
+
             crval1 = float(header['CRVAL1'])
-            crval2 = float(header['CRVAL2']) 
-                
+            crval2 = float(header['CRVAL2'])
+
             # write new CRVALi keywords in different file
             new_hdu = fits.PrimaryHDU(data)
             new_hdu.header = header
             new_hdu.header['CRVAL1'] = (crval1-offset_ra,
-                                    'updated in the moving frame of the object')
+                                        'updated in the moving frame of the object')
             new_hdu.header['CRVAL2'] = (crval2-offset_dec,
-                                    'updated in the moving frame of the object')
+                                        'updated in the moving frame of the object')
             movingfilenames.append(movingfilename)
             new_hdu.writeto(movingfilename, overwrite=True,
                             output_verify='silentfix')
 
-                
-                
     if comoving:
         outfile_name = 'comove.fits'
         fileline = " ".join(movingfilenames)
         n_frames = len(movingfilenames)
     else:
         outfile_name = 'skycoadd.fits'
-        fileline = " ".join(filenames)        
+        fileline = " ".join(filenames)
         n_frames = len(filenames)
-    
-        
-    # run swarp on all image catalogs using different catalogs    
-    commandline = (('swarp -combine Y -combine_type %s -delete_tmpfiles '+
-                    'Y -imageout_name %s -interpolate Y -subtract_back N '+
+
+    # run swarp on all image catalogs using different catalogs
+    commandline = (('swarp -combine Y -combine_type %s -delete_tmpfiles ' +
+                    'Y -imageout_name %s -interpolate Y -subtract_back %s ' +
                     '-weight_type NONE -copy_keywords %s -write_xml N ' +
                     '-CENTER_TYPE MOST %s') %
-                   ({'median':'MEDIAN', 'average':'AVERAGE',
-                     'clipped':'CLIPPED -CLIP_AMPFRAC 0.2 -CLIP_SIGMA 0.1 '}\
+                   ({'median': 'MEDIAN', 'average': 'AVERAGE',
+                     'clipped': 'CLIPPED -CLIP_AMPFRAC 0.2 -CLIP_SIGMA 0.1 '}
                     [combine_method],
-                    outfile_name, obsparam['copy_keywords'], fileline))
+                    outfile_name,
+                    {True: 'Y', False: 'N'}[backsub],
+                    obsparam['copy_keywords'], fileline))
 
     logging.info('call SWARP as: %s' % commandline)
     print('running SWARP to combine {:d} frames...'.format(n_frames))
@@ -249,7 +246,7 @@ def combine(filenames, obsparam, comoving, targetname,
                                  stderr=DEVNULL,
                                  close_fds=True)
         # do not direct stdout to subprocess.PIPE:
-        # for large FITS files, PIPE will clog, stalling 
+        # for large FITS files, PIPE will clog, stalling
         # subprocess.Popen
     except Exception as e:
         print('SWARP call:', (e))
@@ -258,7 +255,7 @@ def combine(filenames, obsparam, comoving, targetname,
 
     swarp.wait()
     print('done!')
-    
+
     # remove files that are not needed anymore
     if not keep_files:
         if comoving:
@@ -269,18 +266,16 @@ def combine(filenames, obsparam, comoving, targetname,
     total_exptime = 0
     for filename in filenames:
         hdulist = fits.open(filename)
-        total_exptime += float(hdulist[0].header[obsparam['exptime']])    
-    
+        total_exptime += float(hdulist[0].header[obsparam['exptime']])
+
     hdulist = fits.open(outfile_name, mode='update')
     hdulist[0].header[obsparam['exptime']] = (total_exptime, 'PP: cumulative')
     hdulist[0].header['COMBO_N'] = (len(filenames), 'PP: N files combo')
     hdulist[0].header['COMBO_M'] = (combine_method, 'PP: combo method')
     hdulist[0].header['COMOVE'] = (str(comoving), 'PP: comoving?')
     hdulist.flush()
-    
+
     return n_frames
-
-
 
 
 if __name__ == '__main__':
@@ -297,6 +292,8 @@ if __name__ == '__main__':
                         help='combination method',
                         choices=['average', 'median', 'clipped'],
                         default='clipped')
+    parser.add_argument("-backsub", action="store_true",
+                        help='subtract background in each frame ')
     parser.add_argument("-keep_files", action="store_true",
                         help='keep intermediate files', default=False)
     parser.add_argument('images', help='images to process', nargs='+')
@@ -306,10 +303,11 @@ if __name__ == '__main__':
     targetname = args.targetname
     manual_rates = args.manual_rates
     combine_method = args.method
+    backsub = args.backsub
     keep_files = args.keep_files
     filenames = args.images
 
-    ### read telescope and filter information from fits headers
+    # read telescope and filter information from fits headers
     # check that they are the same for all images
     instruments = []
     for filename in filenames:
@@ -330,14 +328,11 @@ if __name__ == '__main__':
 
     if manual_rates is not None:
         comoving = True
-    
+
     if comoving and targetname is None:
         targetname = header[obsparam['object']]
-        
+
     # run image combination wrapper
     combination = combine(filenames, obsparam, comoving, targetname,
                           manual_rates, combine_method, keep_files,
-                          display=True,
-                          diagnostics=True)
-
-
+                          backsub, display=True, diagnostics=True)
