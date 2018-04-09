@@ -1154,8 +1154,8 @@ class catalog(object):
 
         # 2MASS to UKIRT YZJHK)
         elif (self.catalogname.find('2MASS') > -1) and \
-            (targetfilter in {'Y_UKIRT', 'Z_UKIRT', 'J_UKIRT',
-                              'H_UKIRT', 'K_UKIRT'}) and \
+            (targetfilter in {'Y', 'Z', 'J',
+                              'H', 'K'}) and \
                 (self.magsystem == 'Vega'):
 
             logging.info(('trying to transform %d 2MASS sources to '
