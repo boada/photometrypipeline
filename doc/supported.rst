@@ -13,6 +13,8 @@ observatories/instruments:
 +--------------------------+--------------------+----------------+
 | Apache Point ARC 3.5m    | ARCTIC             | ARC35ARCTIC    |
 +--------------------------+--------------------+----------------+
+| Apache Point ARC 3.5m    | SPICAM             | ARC35SPICAM    |
++--------------------------+--------------------+----------------+
 | Calar Alto 1.23m         | DLR-MkIII          | CA123DLRMKIII  |
 +--------------------------+--------------------+----------------+
 | CTIO 0.9m                | CFCCD              | CTIO09         |
@@ -24,6 +26,8 @@ observatories/instruments:
 | Discovery Channel        | Large Monolithic   | DCTLMI         |
 | Telescope                | Imager             |                |
 +--------------------------+--------------------+----------------+
+| Gran Canaria 1.5m        | MUSCAT2            | TCS15MUSCAT2   |
++--------------------------+--------------------+----------------+
 | IRSF 1.4m                | SIRIUS             | IRSFSIRIUS     |
 +--------------------------+--------------------+----------------+
 | KMTnet SAAO              | --- (*)            | KMTNETS        |
@@ -34,6 +38,12 @@ observatories/instruments:
 +--------------------------+--------------------+----------------+
 | KPNO 4m                  | NEWFIRM            | KPNO4NEWF      |
 +--------------------------+--------------------+----------------+
+| LCOGT 1m (LSC)           | SBIG (kb78)        | LCOSBIGKB78    |
++--------------------------+--------------------+----------------+
+| LCOGT 1m (LSC)           | Sinistro (fl03)    | LCOSINFL03     |
++--------------------------+--------------------+----------------+
+| LCOGT 2m (COJ)           | Spectral (fs01)    | LCOSPECFS01    |
++--------------------------+--------------------+----------------+
 | Lowell 31"               | NASACAM            | LOWELL31       |
 +--------------------------+--------------------+----------------+
 | Lowell 42"               | NASA42             | LOWELL42       |
@@ -43,7 +53,12 @@ observatories/instruments:
 | Magellan                 | IMACS              | MAGIMACS       |
 +--------------------------+--------------------+----------------+
 | Observatoire Haute-      | CCD                | OHP120         |
-| Provence 1.2m            |                    | OHP120         |
+| Provence 1.2m            |                    |                |
++--------------------------+--------------------+----------------+
+| Palomar 60-inch          | optical facility   | P60OPT         |
+|                          | camera             |                |
++--------------------------+--------------------+----------------+
+| Palomar 60-inch          | SED Machine        | P60SEDM        |
 +--------------------------+--------------------+----------------+
 | SOAR 4.1m                | Goodman (**)       | SOARGOODMAN    |
 +--------------------------+--------------------+----------------+
@@ -64,8 +79,6 @@ observatories/instruments:
 | Generic Telescope        | any                | GENERIC        |
 +--------------------------+--------------------+----------------+
 
-
-
 (*): This camera is a multi-detector instrument; it is recommended to
 split multi-extension FITS frames from this instrument into individual
 single-extension FITS images and to run the pipeline on these
@@ -77,6 +90,8 @@ keywords ``PARAM0``, ``PARAM61``, ``PARAM62``, and ``PARAM63`` prior
 to running PP, e.g., using the ``delhead`` command provided by
 `WCSTools`_.
 
+It is recommended to stitch images from cameras with multiple amplifiers
+together using the correct orientations.
  
 If you would like to use the pipeline for other observatories, please
 contact me.

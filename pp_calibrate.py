@@ -69,7 +69,9 @@ def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
         cat = catalog(catalogname, display)
 
         # load catalog
-        n_sources = cat.download_catalog(ra_deg, dec_deg, rad_deg, max_sources)
+        n_sources = cat.download_catalog(ra_deg, dec_deg, rad_deg,
+                                         max_sources,
+                                         save_catalog=True)
 
         if display:
             print(n_sources, 'sources downloaded from', catalogname)

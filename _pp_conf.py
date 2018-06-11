@@ -81,7 +81,7 @@ if rootpath is None:
 
 # potential FITS header keywords for looking up the instrument
 # any unique header keyword works as a potential identifier
-instrument_keys = ['INSTRUME', 'LCAMMOD']
+instrument_keys = ['INSTRUME', 'LCAMMOD', 'FPA', 'CAM_NAME']
 
 execfile(rootpath+'/setup/telescopes.py')
 

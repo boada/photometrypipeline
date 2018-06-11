@@ -34,20 +34,21 @@ except ImportError:
 import shutil
 import logging
 import subprocess
-import argparse, shlex
+import argparse
+import shlex
 import time
 try:
     from astropy.io import fits
 except ImportError:
     print('Module astropy not found. Please install with: pip install astropy')
     sys.exit()
-    
+
 # only import if Python3 is used
-if sys.version_info > (3,0):
+if sys.version_info > (3, 0):
     from builtins import str
     from builtins import range
 
-### pipeline-specific modules
+# pipeline-specific modules
 import _pp_conf
 from catalog import *
 import pp_prepare
@@ -60,10 +61,10 @@ import pp_combine
 import diagnostics as diag
 
 # setup logging
-logging.basicConfig(filename = _pp_conf.log_filename,
-                    level    = _pp_conf.log_level,
-                    format   = _pp_conf.log_formatline,
-                    datefmt  = _pp_conf.log_datefmt)
+logging.basicConfig(filename=_pp_conf.log_filename,
+                    level=_pp_conf.log_level,
+                    format=_pp_conf.log_formatline,
+                    datefmt=_pp_conf.log_datefmt)
 
 if __name__ == '__main__':
 
@@ -84,7 +85,7 @@ if __name__ == '__main__':
                         default=3)
     parser.add_argument('-solar',
                         help='restrict to solar-color stars',
-                        action="store_true", default=False)    
+                        action="store_true", default=False)
     parser.add_argument('images', help='images to process',
                         nargs='+')
     args = parser.parse_args()
@@ -98,14 +99,14 @@ if __name__ == '__main__':
 
     # use current directory as root directory
     rootdir = os.getcwd()
-    
+
     # check if input filenames is actually a list
     if len(filenames) == 1:
         if filenames[0].find('.lst') > -1 or filenames[0].find('.list') > -1:
-            filenames = [filename[:-1] for filename in open(filenames[0], 'r')\
+            filenames = [filename[:-1] for filename in open(filenames[0], 'r')
                          .readlines()]
-  
-    ### read telescope and filter information from fits headers
+
+    # read telescope and filter information from fits headers
     # check that they are the same for all images
     instruments = []
     for filename in filenames:
@@ -119,7 +120,7 @@ if __name__ == '__main__':
     if len(instruments) == 0:
         raise KeyError('cannot identify telescope/instrument; please update'
                        '_pp_conf.instrument_keys accordingly')
-    
+
     # assign telescope parameters (telescopes.py)
     telescope = _pp_conf.instrument_identifiers[instruments[0]]
     obsparam = _pp_conf.telescope_parameters[telescope]
@@ -135,7 +136,7 @@ if __name__ == '__main__':
                                      targetname, manual_rates,
                                      combinemethod, keep_files,
                                      display=True, diagnostics=True)
-    
+
     # create separate directory to analyze skycoadd data
     if os.path.exists('skycoadd/'):
         shutil.rmtree('skycoadd/')
@@ -143,36 +144,35 @@ if __name__ == '__main__':
     os.rename('skycoadd.fits', 'skycoadd/skycoadd.fits')
     os.chdir('skycoadd/')
 
-    # diagnostics and logging for skycoadd and comove go into respective dirs 
+    # diagnostics and logging for skycoadd and comove go into respective dirs
     _pp_conf.dataroot, _pp_conf.diagroot, \
-    _pp_conf.index_filename, _pp_conf.reg_filename, _pp_conf.cal_filename, \
-    _pp_conf.res_filename = _pp_conf.setup_diagnostics()
+        _pp_conf.index_filename, _pp_conf.reg_filename, _pp_conf.cal_filename, \
+        _pp_conf.res_filename = _pp_conf.setup_diagnostics()
 
-    # setup logging again 
-    logging.basicConfig(filename = _pp_conf.log_filename,
-                        level    = _pp_conf.log_level,
-                        format   = _pp_conf.log_formatline,
-                        datefmt  = _pp_conf.log_datefmt)
-    
+    # setup logging again
+    logging.basicConfig(filename=_pp_conf.log_filename,
+                        level=_pp_conf.log_level,
+                        format=_pp_conf.log_formatline,
+                        datefmt=_pp_conf.log_datefmt)
+
     logging.info('create skycoadd.fits from images: %s' % ','.join(filenames))
     logging.info('move skycoadd.fits into skycoadd/ directory')
-    
+
     # prepare image
     preparation = pp_prepare.prepare(['skycoadd.fits'], obsparam,
                                      {}, keep_wcs=True,
                                      diagnostics=True, display=True)
 
-    
-    ### run photometry (curve-of-growth analysis)
+    # run photometry (curve-of-growth analysis)
     source_minarea = obsparam['source_minarea']
     background_only = True
     target_only = False
     if fixed_aprad == 0:
-        aprad = None # force curve-of-growth analysis
+        aprad = None  # force curve-of-growth analysis
         print('\n----- derive optimum photometry aperture\n')
         logging.info('----- derive optimum photometry aperture')
     else:
-        aprad = fixed_aprad # skip curve_of_growth analysis
+        aprad = fixed_aprad  # skip curve_of_growth analysis
         print('\n----- use fixed aperture radius (%5.2f)\n' % fixed_aprad)
         logging.info('----- use fixed aperture radius (%5.2f)' % fixed_aprad)
 
@@ -190,14 +190,14 @@ if __name__ == '__main__':
     else:
         aprad = fixed_aprad
 
-    ### run photometric calibration
+    # run photometric calibration
     minstars = _pp_conf.minstars
     manualcatalog = None
     if man_filtername is None:
         man_filtername = False
-    
+
     print('\n----- run photometric calibration\n')
-    
+
     calibration = pp_calibrate.calibrate(['skycoadd.fits'], minstars,
                                          man_filtername,
                                          manualcatalog, obsparam, solar=solar,
@@ -209,16 +209,16 @@ if __name__ == '__main__':
 
     logging.info('zeropoint derived from skycoadd.fits: %5.2f+-%4.2f' %
                  (zp, zp_err))
-    
+
     os.chdir(rootdir)
 
     # ------------------- COMOVE
- 
+
     hdulist = fits.open(filenames[0])
     targetname = hdulist[0].header[obsparam['object']]
 
     if comoving:
-    
+
         # create comove in current directory
         ppcombine_comoving = True
         manual_rates = None
@@ -228,7 +228,7 @@ if __name__ == '__main__':
                                          targetname, manual_rates,
                                          combinemethod, keep_files,
                                          display=True, diagnostics=True)
-    
+
         # create separate directory to analyze skycoadd data
         if os.path.exists('comove/'):
             shutil.rmtree('comove/')
@@ -236,19 +236,20 @@ if __name__ == '__main__':
         os.rename('comove.fits', 'comove/comove.fits')
         os.chdir('comove/')
 
-        # diagnostics + logging for skycoadd and comove go into respective dirs 
+        # diagnostics + logging for skycoadd and comove go into respective dirs
         _pp_conf.dataroot, _pp_conf.diagroot, \
             _pp_conf.index_filename, _pp_conf.reg_filename, \
             _pp_conf.cal_filename, \
             _pp_conf.res_filename = _pp_conf.setup_diagnostics()
 
-        # setup logging again 
-        logging.basicConfig(filename = _pp_conf.log_filename,
-                            level    = _pp_conf.log_level,
-                            format   = _pp_conf.log_formatline,
-                            datefmt  = _pp_conf.log_datefmt)
+        # setup logging again
+        logging.basicConfig(filename=_pp_conf.log_filename,
+                            level=_pp_conf.log_level,
+                            format=_pp_conf.log_formatline,
+                            datefmt=_pp_conf.log_datefmt)
 
-        logging.info('create comove.fits from images: %s' % ','.join(filenames))
+        logging.info('create comove.fits from images: %s' %
+                     ','.join(filenames))
         logging.info('move comove.fits into comove/ directory')
 
         # prepare image
@@ -256,12 +257,11 @@ if __name__ == '__main__':
                                          {}, keep_wcs=True,
                                          diagnostics=True, display=True)
 
-    
-        ### run photometry (curve-of-growth analysis)
+        # run photometry (curve-of-growth analysis)
         source_minarea = obsparam['source_minarea']
         background_only = False
         target_only = False
-        
+
         print('\n----- use skycoadd optimum photometry aperture (%4.2f)\n' %
               aprad)
         phot = pp_photometry.photometry(['comove.fits'], snr, source_minarea,
@@ -271,12 +271,11 @@ if __name__ == '__main__':
                                         telescope, obsparam, display=True,
                                         diagnostics=True)
 
-        ### run photometric calibration (instrumental)
+        # run photometric calibration (instrumental)
         minstars = _pp_conf.minstars
-        man_filtername = obsparam['filter_translations']\
-                         [hdulist[0].header['filter']]
+        man_filtername = obsparam['filter_translations'][hdulist[0].header['filter']]
         manualcatalog = None
-    
+
         print('\n----- run photometric calibration\n')
         logging.info('use skycoadd.fits magnitude zeropoint: %5.2f+-%4.2f' %
                      (zp, zp_err))
@@ -287,7 +286,7 @@ if __name__ == '__main__':
                                              display=True,
                                              diagnostics=True)
 
-    ### distill target brightness from database
+    # distill target brightness from database
     man_targetname = None
     man_offset = [0, 0]
     fixed_targets_file = None
@@ -298,21 +297,17 @@ if __name__ == '__main__':
                                     display=True, diagnostics=True)
 
     os.chdir(rootdir)
-    
+
     logging.info('move comove/photometry*.dat to root directory')
     targets = numpy.array(list(distillate['targetnames'].keys()))
     target = targets[targets != 'control_star'][0]
     shutil.copyfile(('comove/photometry_%s.dat' %
                      target.translate(_pp_conf.target2filename)),
-                     ('photometry_%s.dat' %
+                    ('photometry_%s.dat' %
                      target.translate(_pp_conf.target2filename)))
     logging.info('move skycoadd.fits into skycoadd/ directory')
-    
+
     print('\nDone!\n')
     logging.info('----- successfully done with this process ----')
 
-    gc.collect() # collect garbage; just in case, you never know...
-
-
-
-
+    gc.collect()  # collect garbage; just in case, you never know...

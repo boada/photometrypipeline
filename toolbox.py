@@ -26,8 +26,8 @@ import sys
 try:
     from past.utils import old_div
 except ImportError:
-  print('Module future not found. Please install with: pip install future')
-  sys.exit()
+    print('Module future not found. Please install with: pip install future')
+    sys.exit()
 
 import math
 import numpy
@@ -38,7 +38,8 @@ if sys.version_info > (3, 0):
     standard_library.install_aliases()
     from builtins import range
 
-##### TIME AND DATE
+
+# TIME AND DATE
 
 
 def jd_to_gregorian(jd, is_mjd=False):
@@ -46,27 +47,26 @@ def jd_to_gregorian(jd, is_mjd=False):
     if is_mjd:
         mjd = jd
     else:
-        mjd = jd -2400000.5
+        mjd = jd - 2400000.5
 
-    MJD0 = 2400000.5 # 1858 November 17, 00:00:00 hours
+    MJD0 = 2400000.5  # 1858 November 17, 00:00:00 hours
 
     modf = math.modf
     a = int(mjd+MJD0+0.5)
-    b = int(old_div((a-1867216.25),36524.25))
-    c = a+ b - int(modf(old_div(b,4))[1]) + 1525
+    b = int(old_div((a-1867216.25), 36524.25))
+    c = a + b - int(modf(old_div(b, 4))[1]) + 1525
 
-    d = int(old_div((c - 122.1), 365.25))
-    e = 365 * d + int(modf(old_div(d, 4))[1])
-    f = int(old_div((c - e), 30.6001))
+    d = int(old_div((c-122.1), 365.25))
+    e = 365*d + int(modf(old_div(d, 4))[1])
+    f = int(old_div((c-e), 30.6001))
 
-    day = int(c - e - int(30.6001 * f))
-    month = int(f - 1 - 12 * int(modf(old_div(f, 14))[1]))
-    year = int(d - 4715 - int(modf(old_div((7 + month), 10))[1]))
+    day = int(c - e - int(30.6001*f))
+    month = int(f - 1 - 12*int(modf(old_div(f, 14))[1]))
+    year = int(d - 4715 - int(modf(old_div((7+month), 10))[1]))
     fracofday = mjd - math.floor(mjd)
     hour = int(math.floor(fracofday * 24.0))
-    minute = int(math.floor(((fracofday * 24.0) - hour) * 60.))
-    second = int(math.floor(((((fracofday * 24.0) - hour) * 60.) - minute) *
-                            60.))
+    minute = int(math.floor(((fracofday*24.0)-hour)*60.))
+    second = int(math.floor(((((fracofday*24.0)-hour)*60.)-minute)*60.))
 
     return (year, month, day, hour, minute, second)
 
@@ -90,25 +90,27 @@ def dateobs_to_jd(date):
     y = float(date[0]) + 4800 - a
     m = float(date[1]) + 12 * a - 3
     return float(date[2]) + ((153*m + 2)//5) + 365*y + y//4 - y//100 \
-      + y//400 - 32045.5 + old_div(float(time[0]),24.) + old_div(float(time[1]),1440.) \
-      + old_div(float(time[2]),86400.)
+        + y//400 - 32045.5 + old_div(float(time[0]), 24.) + old_div(float(time[1]), 1440.) \
+        + old_div(float(time[2]), 86400.)
 
 
 def jd_to_fractionalyear(jd, is_mjd=False):
-  """ convert a julian date into a fractional year, e.g., 2000.123456 """
-  if is_mjd:
-      jd += 2400000.5
-  date = jd_to_gregorian(jd)
-  year = date[0]+old_div(date[1],12.)+old_div(date[2],365.)+old_div(date[3],8760.)+old_div(date[4],525600.)
-  return year
+    """ convert a julian date into a fractional year, e.g., 2000.123456 """
+    if is_mjd:
+        jd += 2400000.5
+    date = jd_to_gregorian(jd)
+    year = date[0]+old_div(date[1], 12.)+old_div(date[2], 365.) + \
+        old_div(date[3], 8760.)+old_div(date[4], 525600.)
+    return year
 
 
 def fractionalyear_to_jd(date):
-  """ convert a fractional year into a julian date """
-  jd_jan1 = dateobs_to_jd('%4d-01-01T00:00:00' % math.floor(date))
-  return jd_jan1 + 365*(date-math.floor(date))
+    """ convert a fractional year into a julian date """
+    jd_jan1 = dateobs_to_jd('%4d-01-01T00:00:00' % math.floor(date))
+    return jd_jan1 + 365*(date-math.floor(date))
 
-### ASTROMATIC tools
+
+# ASTROMATIC tools
 
 
 def read_scamp_output():
@@ -117,12 +119,12 @@ def read_scamp_output():
     headers, hdr_idx, data = {}, 0, []
     read_this, idx = False, 0
     while idx < len(raw):
-        ### read header
+        # read header
         if read_this and raw[idx].find('<FIELD name=') > -1:
-            headers[raw[idx][raw[idx].find('<FIELD name') + 13:
+            headers[raw[idx][raw[idx].find('<FIELD name')+13:
                              raw[idx].find('" datatype')]] = hdr_idx
             hdr_idx += 1
-        ### read data
+        # read data
         # new data line
         if read_this and raw[idx].find('<TR>') > -1:
             this_data = []
@@ -135,7 +137,7 @@ def read_scamp_output():
             for item in line:
                 if len(item.strip()) > 0 and item.find('\n') == -1:
                     this_data.append(item)
-        ### control reading
+        # control reading
         # activate reading
         if not read_this and \
            raw[idx].find('<TABLE ID="Fields" name="Fields">') > -1:
@@ -148,14 +150,15 @@ def read_scamp_output():
     # check if data rows have same length as header
     abort = False
     for i in range(len(data)):
-      if len(headers) != len(data[i]):
-        raise (RuntimeError,
-               ('data and header lists from SCAMP output file have '
-                'different lengths for image %s; do the FITS files have the '
-                'OBJECT keyword populated?') % data[i][headers['Catalog_Name']])
+        if len(headers) != len(data[i]):
+            raise (RuntimeError,
+                   ('data and header lists from SCAMP output file have '
+                    'different lengths for image %s; do the FITS files have the '
+                    'OBJECT keyword populated?') % data[i][headers['Catalog_Name']])
     return (headers, data)
 
-##### PP tools
+
+# PP tools
 
 
 def get_binning(header, obsparam):
@@ -163,19 +166,20 @@ def get_binning(header, obsparam):
         use obsparam['binning'] keywords, unless both keywords are set to 1
         return: tuple (binning_x, binning_y)"""
 
-    if obsparam['binning'][0] == 1 and obsparam['binning'][1] == 1:
-        binning_x = 1
-        binning_y = 1
+    if (isinstance(obsparam['binning'][0], int) and
+            isinstance(obsparam['binning'][1], int)):
+        binning_x = obsparam['binning'][0]
+        binning_y = obsparam['binning'][1]
     elif '#' in obsparam['binning'][0]:
         if '#blank' in obsparam['binning'][0]:
-            binning_x = float(header[obsparam['binning'][0].\
+            binning_x = float(header[obsparam['binning'][0].
                                      split('#')[0]].split()[0])
-            binning_y = float(header[obsparam['binning'][1].\
+            binning_y = float(header[obsparam['binning'][1].
                                      split('#')[0]].split()[1])
         elif '#x' in obsparam['binning'][0]:
-            binning_x = float(header[obsparam['binning'][0].\
+            binning_x = float(header[obsparam['binning'][0].
                                      split('#')[0]].split('x')[0])
-            binning_y = float(header[obsparam['binning'][1].\
+            binning_y = float(header[obsparam['binning'][1].
                                      split('#')[0]].split('x')[1])
         elif '#CH#' in obsparam['binning'][0]:
             # only for RATIR
@@ -196,21 +200,29 @@ def skycenter(catalogs, ra_key='ra.deg', dec_key='dec.deg'):
     from astropy.coordinates import SkyCoord
     from astropy import units as u
 
-    min_ra  = min([numpy.min(cat[ra_key]) for cat in catalogs])
-    max_ra  = max([numpy.max(cat[ra_key]) for cat in catalogs])
-    min_dec = min([numpy.min(cat[dec_key]) for cat in catalogs])
-    max_dec = max([numpy.max(cat[dec_key]) for cat in catalogs])
+    # using percentiles instead of min/max to get better handle
+    # on outliers
+    min_ra = min([numpy.percentile(cat[ra_key], 1)
+                  for cat in catalogs])
+    max_ra = max([numpy.percentile(cat[ra_key], 99)
+                  for cat in catalogs])
+    min_dec = min([numpy.percentile(cat[dec_key], 1)
+                   for cat in catalogs])
+    max_dec = max([numpy.percentile(cat[dec_key], 99)
+                   for cat in catalogs])
 
     ra, dec = (max_ra+min_ra)/2, (max_dec+min_dec)/2
 
-    lower_left= SkyCoord(ra=min_ra, dec=min_dec, frame='icrs', unit='deg')
+    lower_left = SkyCoord(ra=min_ra, dec=min_dec, frame='icrs', unit='deg')
     upper_right = SkyCoord(ra=max_ra, dec=max_dec, frame='icrs', unit='deg')
 
-    rad     = lower_left.separation(upper_right).deg/2
+    rad = lower_left.separation(upper_right).deg/2
 
     return ra, dec, rad
 
-## miscellaneous tools
+
+# miscellaneous tools
+
 def if_val_in_dict(target_val, dic):
     """check if a value appears in a nested dict structure"""
     for key, val in dic.items():

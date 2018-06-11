@@ -48,8 +48,8 @@ directory (include these commands in your ``.bashrc``, ``.cshrc``, or
 ``.profile`` file.)
 
 
-Installation Instructions for Ubuntu 16.10
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Installation Instructions for Ubuntu 16.10/16.04
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Clone the PP github repo::
 
@@ -135,7 +135,8 @@ Install SCAMP::
 Install extra software::
 
   sudo port install wget
-  
+  sudo port install imagemagick
+
 Install PP::
   
   git clone https://github.com/mommermi/photometrypipeline

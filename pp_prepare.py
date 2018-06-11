@@ -35,9 +35,9 @@ import re
 import sys
 import logging
 import argparse
-#try:
+# try:
 #    import callhorizons
-#except ImportError:
+# except ImportError:
 #    print('Module callhorizons not found. Please install with: pip install '
 #          'callhorizons')
 #    sys.exit()
@@ -220,7 +220,6 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         header['PHOTFLAG'] = ('F', 'PP: data is not photometric (SCAMP)')
         header['PHOT_K'] = (0.05, 'PP: assumed extinction coefficient')
 
-
         if not keep_wcs:
 
             # remove keywords that might collide with fake wcs
@@ -281,10 +280,11 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                      'PP: obs midtime')
             else:
                 datetime = (header[obsparam['date_keyword'].split('|')[0]] +
-                        'T' + header[obsparam['date_keyword'].split('|')[1]])
+                            'T' + header[obsparam['date_keyword'].split('|')[1]])
                 datetime = datetime.replace('/', '-')
                 header['MIDTIMJD'] = (toolbox.dateobs_to_jd(datetime) +
-                                float(header[obsparam['exptime']])/2./86400.,
+                                      float(
+                                          header[obsparam['exptime']])/2./86400.,
                                       'PP: obs midtime')
 
         # other keywords
@@ -306,12 +306,10 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
             obsparam['filter_translations'][header[obsparam['filter']]]
         except KeyError:
             logging.warning('cannot translate filter keyword \"' +
-                          header[obsparam['filter']] +
-                          '\"; assume clear filter')
+                            header[obsparam['filter']] +
+                            '\"; assume clear filter')
             header[obsparam['filter']] = 'clear'
         header['FILTER'] = (header[obsparam['filter']], 'PP:copied')
-
-
 
         # perform header update
         for key, value in list(header_update.items()):
@@ -360,7 +358,6 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         #                                    'PP: queried from Horizons')
 
         # add fake wcs information that is necessary to run SCAMP
-
 
         # read out ra and dec from header
         if obsparam['radec_separator'] == 'XXX':
@@ -435,11 +432,10 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                                 'PP: fake Coordinate reference value')
             header['CRPIX1'] = (int(old_div(
                 float(header[obsparam['extent'][0]]), 2)),
-                                'PP: fake Coordinate reference pixel')
+                'PP: fake Coordinate reference pixel')
             header['CRPIX2'] = (int(old_div(
                 float(header[obsparam['extent'][1]]), 2)),
-                                'PP: fake Coordinate reference pixel')
-
+                'PP: fake Coordinate reference pixel')
 
             # plugin default distortion parameters, if available
             if 'distort' in obsparam:
@@ -454,9 +450,9 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                         header[pv_key] = (pv_val, 'PP: default distortion')
                 except KeyError:
                     logging.error(('No distortion coefficients available for '
-                                '%s %s') % (obsparam['distort']['functionof'],
-                                            header[obsparam['distort']
-                                                   ['functionof']]))
+                                   '%s %s') % (obsparam['distort']['functionof'],
+                                               header[obsparam['distort']
+                                                      ['functionof']]))
 
             header['CD1_1'] = (xnorm * numpy.cos(this_rotate/180.*numpy.pi) *
                                obsparam['secpix'][0]*binning[0]/3600.,

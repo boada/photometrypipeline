@@ -29,7 +29,7 @@ import os
 import sys
 import numpy
 import logging
-#import urllib.request, urllib.error, urllib.parse
+# import urllib.request, urllib.error, urllib.parse
 import time
 import sqlite3 as sql
 
@@ -345,7 +345,8 @@ class catalog(object):
             try:
                 self.data = vquery.query_region(field,
                                                 width=("%fd" % rad_deg),
-                                                catalog="I/337/gaia")[0]
+                                                catalog="I/337/gaia",
+                                                cache=False)[0]
             except IndexError:
                 if self.display:
                     print('no data available from %s' % self.catalogname)
@@ -384,7 +385,8 @@ class catalog(object):
             try:
                 self.data = vquery.query_region(field,
                                                 width=("%fd" % rad_deg),
-                                                catalog="I/337/tgas")[0]
+                                                catalog="I/337/tgas",
+                                                cache=False)[0]
             except IndexError:
                 if self.display:
                     print('no data available from %s' % self.catalogname)
@@ -421,7 +423,8 @@ class catalog(object):
             try:
                 self.data = vquery.query_region(field,
                                                 width=("%fd" % rad_deg),
-                                                catalog="II/246/out")[0]
+                                                catalog="II/246/out",
+                                                cache=False)[0]
             except IndexError:
                 if self.display:
                     print('no data available from %s' % self.catalogname)
@@ -490,7 +493,8 @@ class catalog(object):
             try:
                 self.data = vquery.query_region(field,
                                                 width=("%fd" % rad_deg),
-                                                catalog="I/329/urat1")[0]
+                                                catalog="I/329/urat1",
+                                                cache=False)[0]
             except IndexError:
                 if self.display:
                     print('no data available from %s' % self.catalogname)
@@ -528,7 +532,8 @@ class catalog(object):
             try:
                 self.data = vquery.query_region(field,
                                                 width=("%fd" % rad_deg),
-                                                catalog="II/336/apass9")[0]
+                                                catalog="II/336/apass9",
+                                                cache=False)[0]
             except IndexError:
                 if self.display:
                     print('no data available from %s' % self.catalogname)
@@ -561,7 +566,8 @@ class catalog(object):
             try:
                 self.data = vquery.query_region(field,
                                                 width=("%fd" % rad_deg),
-                                                catalog="V/139/sdss9")[0]
+                                                catalog="V/139/sdss9",
+                                                cache=False)[0]
             except IndexError:
                 if self.display:
                     print('no data available from %s' % self.catalogname)
@@ -602,7 +608,8 @@ class catalog(object):
                                                                'clean',
                                                                'type'],
                                               timeout=180,
-                                              data_release=13)
+                                              data_release=13,
+                                              cache=False)
             except IndexError:
                 if self.display:
                     print('no data available from %s' % self.catalogname)
@@ -721,6 +728,10 @@ class catalog(object):
             self.data.rename_column('XWIN_WORLD', 'ra.deg')
         if 'YWIN_WORLD' in self.fields:
             self.data.rename_column('YWIN_WORLD', 'dec.deg')
+
+        # force positive RA values
+        flip_idc = numpy.where(self.data['ra.deg'] < 0)[0]
+        self.data['ra.deg'][flip_idc] += 360
 
         logging.info('read %d sources in %d columns from LDAC file %s' %
                      (self.shape[0], self.shape[1], filename))

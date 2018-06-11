@@ -42,7 +42,7 @@ import matplotlib.pylab as plt
 import callhorizons
 
 # only import if Python3 is used
-if sys.version_info > (3,0):
+if sys.version_info > (3, 0):
     from builtins import str
     from builtins import range
 
@@ -54,10 +54,10 @@ from toolbox import *
 import diagnostics as diag
 
 # setup logging
-logging.basicConfig(filename = _pp_conf.log_filename,
-                    level    = _pp_conf.log_level,
-                    format   = _pp_conf.log_formatline,
-                    datefmt  = _pp_conf.log_datefmt)
+logging.basicConfig(filename=_pp_conf.log_filename,
+                    level=_pp_conf.log_level,
+                    format=_pp_conf.log_formatline,
+                    datefmt=_pp_conf.log_datefmt)
 
 
 def curve_of_growth_analysis(filenames, parameters,
@@ -66,11 +66,11 @@ def curve_of_growth_analysis(filenames, parameters,
     output = {}
     obsparam = parameters['obsparam']
 
-    logging.info('starting photometry with parameters: %s' % \
+    logging.info('starting photometry with parameters: %s' %
                  (', '.join([('%s: %s' % (var, str(val))) for
                              var, val in list(locals().items())])))
 
-    ### re-extract sources for curve-of-growth analysis
+    # re-extract sources for curve-of-growth analysis
 
     aprads = parameters['aprad']
     if not isinstance(aprads, list) and not isinstance(aprads, numpy.ndarray):
@@ -78,27 +78,26 @@ def curve_of_growth_analysis(filenames, parameters,
         os.abort()
 
     logging.info('run pp_extract using %d apertures' % len(aprads))
-    print('* extract sources from %d images using %d apertures' % \
-        (len(filenames), len(aprads)))
+    print('* extract sources from %d images using %d apertures' %
+          (len(filenames), len(aprads)))
 
-    extractparameters = {'sex_snr':parameters['sex_snr'],
-                         'source_minarea':parameters['source_minarea'],
-                         'paramfile':_pp_conf.rootpath \
-                                     +'/setup/twentyapertures.sexparam',
-                         'aprad':aprads, 'telescope':parameters['telescope'],
-                         'quiet':False}
+    extractparameters = {'sex_snr': parameters['sex_snr'],
+                         'source_minarea': parameters['source_minarea'],
+                         'paramfile': _pp_conf.rootpath
+                         + '/setup/twentyapertures.sexparam',
+                         'aprad': aprads, 'telescope': parameters['telescope'],
+                         'quiet': False}
 
     extraction = pp_extract.extract_multiframe(filenames, extractparameters)
-    extraction = [e for e in extraction if len(e)>0]
+    extraction = [e for e in extraction if len(e) > 0]
 
-
-    ##### curve-of-growth analysis
+    # curve-of-growth analysis
 
     # arrays for accumulating source information as a function of aprad
-    background_flux = [] # numpy.zeros(len(aprads))
-    target_flux = [] # numpy.zeros(len(aprads))
-    background_snr = [] # numpy.zeros(len(aprads))
-    target_snr = [] # numpy.zeros(len(aprads))
+    background_flux = []  # numpy.zeros(len(aprads))
+    target_flux = []  # numpy.zeros(len(aprads))
+    background_snr = []  # numpy.zeros(len(aprads))
+    target_snr = []  # numpy.zeros(len(aprads))
 
     for filename in filenames:
 
@@ -110,9 +109,10 @@ def curve_of_growth_analysis(filenames, parameters,
             hdu = fits.open(filename, ignore_missing_end=True)
 
             # pull target coordinates from Horizons
-            targetname =  hdu[0].header[obsparam['object']]
+            targetname = hdu[0].header[obsparam['object']]
             if parameters['manobjectname'] is not None:
-                targetname = parameters['manobjectname'].translate(_pp_conf.target2filename)
+                targetname = parameters['manobjectname'].translate(
+                    _pp_conf.target2filename)
 
             image = hdu[0].data
 
@@ -122,12 +122,12 @@ def curve_of_growth_analysis(filenames, parameters,
                 exptime = float(hdu[0].header[obsparam['exptime']])
                 if obsparam['date_keyword'].find('|') == -1:
                     date = hdu[0].header[obsparam['date_keyword']]
-                    date = dateobs_to_jd(date)+ exptime/2./86400.
+                    date = dateobs_to_jd(date) + exptime/2./86400.
                 else:
                     date_key = obsparam['date_keyword'].split('|')[0]
                     time_key = obsparam['date_keyword'].split('|')[1]
-                    date = hdu[0].header[date_key]+'T'+\
-                           hdu[0].header[time_key]
+                    date = hdu[0].header[date_key]+'T' +\
+                        hdu[0].header[time_key]
                     date = dateobs_to_jd(date) + exptime/2./86400.
             else:
                 date = hdu[0].header['MIDTIMJD']
@@ -143,7 +143,7 @@ def curve_of_growth_analysis(filenames, parameters,
                 n = None
 
             if n is None or n == 0:
-                logging.warning('WARNING: No position from Horizons!'+\
+                logging.warning('WARNING: No position from Horizons!' +
                                 'Name (%s) correct?' % targetname)
                 logging.warning('HORIZONS call: %s' % eph.url)
                 logging.info('proceeding with background sources analysis')
@@ -153,69 +153,65 @@ def curve_of_growth_analysis(filenames, parameters,
                              targetname)
                 target_ra, target_dec = eph[0]['RA'], eph[0]['DEC']
 
-
-        ### pull data from LDAC file
+        # pull data from LDAC file
         ldac_filename = filename[:filename.find('.fit')]+'.ldac'
         data = catalog('Sextractor_LDAC')
         data.read_ldac(ldac_filename, maxflag=3)
 
-
-        ### identify target and extract its curve-of-growth
+        # identify target and extract its curve-of-growth
         n_target_identified = 0
         if not parameters['background_only']:
-            residuals = numpy.sqrt((data['ra.deg']-target_ra)**2 + \
+            residuals = numpy.sqrt((data['ra.deg']-target_ra)**2 +
                                    (data['dec.deg']-target_dec)**2)
             target_idx = numpy.argmin(residuals)
-            if residuals[target_idx] > old_div(_pp_conf.pos_epsilon,3600.):
-                logging.warning(('WARNING: frame %s, large residual to '+ \
-                                 'HORIZONS position of %s: %f arcsec; '+ \
+            if residuals[target_idx] > old_div(_pp_conf.pos_epsilon, 3600.):
+                logging.warning(('WARNING: frame %s, large residual to ' +
+                                 'HORIZONS position of %s: %f arcsec; ' +
                                  'ignore this frame') %
                                 (filename, targetname,
                                  residuals[numpy.argmin(residuals)]*3600.))
             else:
-                target_flux.append(old_div(data[target_idx]['FLUX_'+
+                target_flux.append(old_div(data[target_idx]['FLUX_' +
                                                             _pp_conf.photmode],
-                                   max(data[target_idx]['FLUX_'+
-                                                        _pp_conf.photmode])))
+                                           max(data[target_idx]['FLUX_' +
+                                                                _pp_conf.photmode])))
                 target_snr.append(
-                    data[target_idx]['FLUX_'+_pp_conf.photmode]/\
-                    data[target_idx]['FLUXERR_'+_pp_conf.photmode]/ \
-                    max(old_div(data[target_idx]['FLUX_'+_pp_conf.photmode], \
-                        data[target_idx]['FLUXERR_'+_pp_conf.photmode])))
+                    data[target_idx]['FLUX_'+_pp_conf.photmode] /
+                    data[target_idx]['FLUXERR_'+_pp_conf.photmode] /
+                    max(old_div(data[target_idx]['FLUX_'+_pp_conf.photmode],
+                                data[target_idx]['FLUXERR_'+_pp_conf.photmode])))
                 n_target_identified += 1
 
-        ### extract background source fluxes and snrs
+        # extract background source fluxes and snrs
         #   assume n_background_sources >> 1, do not reject target
         if not parameters['target_only']:
-            #n_src = data.shape[0] # use all sources
-            n_src = 50 # use only 50 sources
+            # n_src = data.shape[0] # use all sources
+            n_src = 50  # use only 50 sources
             for idx, src in enumerate(data.data[:n_src]):
                 if (numpy.any(numpy.isnan(src['FLUX_'+_pp_conf.photmode])) or
                     numpy.any(numpy.isnan(src['FLUXERR_'+_pp_conf.photmode])) or
-                    src['FLAGS'] > 3):
+                        src['FLAGS'] > 3):
                     continue
 
                 # create growth curve
-                background_flux.append(old_div(src['FLUX_'+_pp_conf.photmode],\
-                                       max(src['FLUX_'+_pp_conf.photmode])))
-                background_snr.append(src['FLUX_'+_pp_conf.photmode]/\
-                                      src['FLUXERR_'+_pp_conf.photmode]/\
-                                      max(old_div(src['FLUX_'+
-                                                      _pp_conf.photmode],\
-                                          src['FLUXERR_'+_pp_conf.photmode])))
+                background_flux.append(old_div(src['FLUX_'+_pp_conf.photmode],
+                                               max(src['FLUX_'+_pp_conf.photmode])))
+                background_snr.append(src['FLUX_'+_pp_conf.photmode] /
+                                      src['FLUXERR_'+_pp_conf.photmode] /
+                                      max(old_div(src['FLUX_' +
+                                                      _pp_conf.photmode],
+                                                  src['FLUXERR_'+_pp_conf.photmode])))
 
-
-    ###### investigate curve-of-growth
+    # investigate curve-of-growth
 
     logging.info('investigate curve-of-growth based on %d frames' %
                  len(filenames))
 
-
-    #### combine results
+    # combine results
     n_target = len(target_flux)
     if n_target > 0:
         target_flux = (numpy.median(target_flux, axis=0),
-                       old_div(numpy.std(target_flux, axis=0),numpy.sqrt(n_target)))
+                       old_div(numpy.std(target_flux, axis=0), numpy.sqrt(n_target)))
         target_snr = numpy.median(target_snr, axis=0)
     else:
         target_flux = (numpy.zeros(len(aprads)), numpy.zeros(len(aprads)))
@@ -224,16 +220,15 @@ def curve_of_growth_analysis(filenames, parameters,
     n_background = len(background_flux)
     if n_background > 0:
         background_flux = (numpy.median(background_flux, axis=0),
-                           old_div(numpy.std(background_flux, axis=0),\
-                           numpy.sqrt(n_background)))
+                           old_div(numpy.std(background_flux, axis=0),
+                                   numpy.sqrt(n_background)))
         background_snr = numpy.median(background_snr, axis=0)
     else:
         background_flux = (numpy.zeros(len(aprads)), numpy.zeros(len(aprads)))
         background_snr = numpy.zeros(len(aprads))
 
-
     if n_target == 0:
-        logging.info('No target fluxes available, using background sources, ' +\
+        logging.info('No target fluxes available, using background sources, ' +
                      'only')
         parameters['background_only'] = True
 
@@ -241,29 +236,28 @@ def curve_of_growth_analysis(filenames, parameters,
         logging.info('No background fluxes available, using target, only')
         parameters['target_only'] = True
 
-
-    #### find optimum aperture radius
+    # find optimum aperture radius
     if parameters['target_only']:
         aprad_strategy = 'smallest target aprad that meets fluxlimit criterion'
-        optimum_aprad_idx = numpy.argmin(numpy.fabs(target_flux[0] - \
+        optimum_aprad_idx = numpy.argmin(numpy.fabs(target_flux[0] -
                                                     _pp_conf.fluxlimit_aprad))
     elif parameters['background_only']:
         aprad_strategy = 'smallest background aprad that meets fluxlimit ' + \
                          'criterion'
-        optimum_aprad_idx = numpy.argmin(numpy.fabs(background_flux[0] - \
+        optimum_aprad_idx = numpy.argmin(numpy.fabs(background_flux[0] -
                                                     _pp_conf.fluxlimit_aprad))
     else:
         # flux_select: indices where target+background fluxes > fluxlimit
         flux_select = numpy.where((target_flux[0] > _pp_conf.fluxlimit_aprad) &
-                            (background_flux[0] > _pp_conf.fluxlimit_aprad))[0]
-        flux_res = numpy.fabs(target_flux[0][flux_select] -\
-                                background_flux[0][flux_select])
+                                  (background_flux[0] > _pp_conf.fluxlimit_aprad))[0]
+        flux_res = numpy.fabs(target_flux[0][flux_select] -
+                              background_flux[0][flux_select])
 
         if numpy.min(flux_res) < _pp_conf.fluxmargin_aprad:
             aprad_strategy = 'target+background fluxes > fluxlimit, ' + \
                              'flux difference < margin'
             optimum_aprad_idx = flux_select[numpy.where(flux_res <
-                                        _pp_conf.fluxmargin_aprad)[0][0]]
+                                                        _pp_conf.fluxmargin_aprad)[0][0]]
         else:
             aprad_strategy = 'target+background fluxes > fluxlimit, ' + \
                              'flux difference minimal'
@@ -271,40 +265,40 @@ def curve_of_growth_analysis(filenames, parameters,
 
     optimum_aprad = parameters['aprad'][optimum_aprad_idx]
 
-    output['aprad_strategy']   = aprad_strategy
-    output['optimum_aprad']    = optimum_aprad
-    output['pos_epsilon']      = _pp_conf.pos_epsilon
-    output['fluxlimit_aprad']  = _pp_conf.fluxlimit_aprad
+    output['aprad_strategy'] = aprad_strategy
+    output['optimum_aprad'] = optimum_aprad
+    output['pos_epsilon'] = _pp_conf.pos_epsilon
+    output['fluxlimit_aprad'] = _pp_conf.fluxlimit_aprad
     output['fluxmargin_aprad'] = _pp_conf.fluxmargin_aprad
-    output['n_target']         = len(target_flux[0])
-    output['n_bkg']            = len(background_flux[0])
-    output['target_flux']      = target_flux
-    output['target_snr']       = target_snr
-    output['background_flux']  = background_flux
-    output['background_snr']   = background_snr
-    output['parameters']       = parameters
+    output['n_target'] = len(target_flux[0])
+    output['n_bkg'] = len(background_flux[0])
+    output['target_flux'] = target_flux
+    output['target_snr'] = target_snr
+    output['background_flux'] = background_flux
+    output['background_snr'] = background_snr
+    output['parameters'] = parameters
 
-    ##### write results to file
+    # write results to file
     outf = open(_pp_conf.diagroot+'curveofgrowth.dat', 'w')
-    outf.writelines('#      background              target          flux\n'+\
+    outf.writelines('#      background              target          flux\n' +
                     '# rad   flux sigma snr      flux sigma snr  residual\n')
     for i in range(len(parameters['aprad'])):
-        outf.writelines (('%5.2f  %5.3f %5.3f %4.2f   %6.3f %5.3f %4.2f   '+\
+        outf.writelines(('%5.2f  %5.3f %5.3f %4.2f   %6.3f %5.3f %4.2f   ' +
                          '%6.3f\n') %
-                         (parameters['aprad'][i], background_flux[0][i],
-                          background_flux[1][i], background_snr[i],
-                          target_flux[0][i], target_flux[1][i],
-                          target_snr[i],
-                          target_flux[0][i]-background_flux[0][i]))
+                        (parameters['aprad'][i], background_flux[0][i],
+                         background_flux[1][i], background_snr[i],
+                         target_flux[0][i], target_flux[1][i],
+                         target_snr[i],
+                         target_flux[0][i]-background_flux[0][i]))
     outf.close()
 
-    ### extraction content
+    # extraction content
     #
     # -> see pp_extract.py
     #
     ###
 
-    ### output content
+    # output content
     #
     # { 'aprad_strategy'  : optimum aperture finding strategy,
     #   'optimum_aprad'   : optimum aperature radius,
@@ -321,12 +315,12 @@ def curve_of_growth_analysis(filenames, parameters,
     # }
     ###
 
-    ##### diagnostics
+    # diagnostics
     if diagnostics:
         diag.add_photometry(output, extraction)
         pass
 
-    ##### update image headers
+    # update image headers
     for filename in filenames:
         hdu = fits.open(filename, mode='update', ignore_missing_end=True)
         hdu[0].header['APRAD'] = (optimum_aprad, 'aperture phot radius (px)')
@@ -334,14 +328,13 @@ def curve_of_growth_analysis(filenames, parameters,
         hdu.flush()
         hdu.close()
 
-
-    ##### display results
+    # display results
     if display:
         print('\n#################################### PHOTOMETRY SUMMARY:\n###')
         print('### best-fit aperture radius %5.2f (px)' % (optimum_aprad))
         print('###\n#####################################################\n')
 
-    logging.info('==> best-fit aperture radius: %3.1f (px)'  % (optimum_aprad))
+    logging.info('==> best-fit aperture radius: %3.1f (px)' % (optimum_aprad))
 
     return output
 
@@ -355,21 +348,21 @@ def photometry(filenames, sex_snr, source_minarea, aprad,
     """
 
     # photometry parameters
-    photpar = {'sex_snr'         : sex_snr,
-               'source_minarea'  : source_minarea,
-               'manobjectname'   : manobjectname,
-               'background_only' : background_only,
-               'target_only'     : target_only,
-               'obsparam'        : obsparam,
-               'telescope'       : telescope,
-               'quiet'           : not display}
+    photpar = {'sex_snr': sex_snr,
+               'source_minarea': source_minarea,
+               'manobjectname': manobjectname,
+               'background_only': background_only,
+               'target_only': target_only,
+               'obsparam': obsparam,
+               'telescope': telescope,
+               'quiet': not display}
 
-    ### do curve-of-growth analysis if aprad not provided
+    # do curve-of-growth analysis if aprad not provided
     for filename in filenames:
         hdu = fits.open(filename, mode='update',
                         ignore_missing_end=True)
         hdu[0].header['PHOTMODE'] = (_pp_conf.photmode,
-                                      'PP photometry mode')
+                                     'PP photometry mode')
         hdu.flush()
         hdu.close()
 
@@ -378,14 +371,14 @@ def photometry(filenames, sex_snr, source_minarea, aprad,
             # aperture radius list
             aprads = numpy.linspace(obsparam['aprad_range'][0],
                                     obsparam['aprad_range'][1], 20)
-            
+
             photpar['aprad'] = aprads
             cog = curve_of_growth_analysis(filenames, photpar,
                                            display=display,
                                            diagnostics=diagnostics)
             aprad = cog['optimum_aprad']
         else:
-            ## add manually selected aprad to image headers
+            # add manually selected aprad to image headers
             for filename in filenames:
                 hdu = fits.open(filename, mode='update',
                                 ignore_missing_end=True)
@@ -396,32 +389,31 @@ def photometry(filenames, sex_snr, source_minarea, aprad,
 
         # run extract using (optimum) aprad
         photpar['aprad'] = round(aprad, 2)
-        photpar['paramfile'] = (_pp_conf.rootpath+
+        photpar['paramfile'] = (_pp_conf.rootpath +
                                 '/setup/singleaperture.sexparam')
-        logging.info('extract sources using optimum aperture from %d images' % \
+        logging.info('extract sources using optimum aperture from %d images' %
                      len(filenames))
-        
+
         if display:
-            print(('* extract sources from %d images using aperture ' \
-                   + 'radius %4.2fpx') % \
+            print(('* extract sources from %d images using aperture '
+                   + 'radius %4.2fpx') %
                   (len(filenames), aprad))
     else:
         photpar['aprad'] = None
-        photpar['paramfile'] = (_pp_conf.rootpath+
+        photpar['paramfile'] = (_pp_conf.rootpath +
                                 '/setup/singleaperture.sexparam')
 
         logging.info('extract sources using ' + _pp_conf.photmode +
                      ' photometry')
 
         if display:
-            print(('* extract sources from %d images using ' \
-                   + _pp_conf.photmode + ' photometry') % \
+            print(('* extract sources from %d images using '
+                   + _pp_conf.photmode + ' photometry') %
                   len(filenames))
 
     photpar['photmode'] = _pp_conf.photmode
-            
-    pp_extract.extract_multiframe(filenames, photpar)
 
+    pp_extract.extract_multiframe(filenames, photpar)
 
     logging.info('Done! -----------------------------------------------------')
 
@@ -431,15 +423,15 @@ def photometry(filenames, sex_snr, source_minarea, aprad,
         return None
 
 
-########### MAIN
+# MAIN
 
 if __name__ == '__main__':
 
     # define command line arguments
     parser = argparse.ArgumentParser(description='automated photometry')
-    parser.add_argument('-snr', help='sextractor SNR threshold for '+\
+    parser.add_argument('-snr', help='sextractor SNR threshold for ' +
                         'photometry catalog', default=2)
-    parser.add_argument('-minarea', help='sextractor SNR threshold for '+\
+    parser.add_argument('-minarea', help='sextractor SNR threshold for ' +
                         'photometry catalog', default=0)
     parser.add_argument('-aprad', help='aperture radius for photometry (px)',
                         default=None)
@@ -465,7 +457,7 @@ if __name__ == '__main__':
     # check if input filenames is actually a list
     if len(filenames) == 1:
         if filenames[0].find('.lst') > -1 or filenames[0].find('.list') > -1:
-            filenames = [filename[:-1] for filename in open(filenames[0], 'r')\
+            filenames = [filename[:-1] for filename in open(filenames[0], 'r')
                          .readlines()]
 
     # obtain telescope information
@@ -473,8 +465,8 @@ if __name__ == '__main__':
     try:
         telescope = hdu[0].header['TEL_KEYW']
     except KeyError:
-        print('ERROR: cannot find telescope keyword in image header;'+\
-            'has this image run through pp_prepare?')
+        print('ERROR: cannot find telescope keyword in image header;' +
+              'has this image run through pp_prepare?')
         sys.exit(0)
     obsparam = _pp_conf.telescope_parameters[telescope]
 
@@ -489,5 +481,3 @@ if __name__ == '__main__':
                       manobjectname, background_only, target_only,
                       telescope, obsparam, display=True,
                       diagnostics=True)
-
-

@@ -406,10 +406,7 @@ Functions that provide additional functionality:
    for a recipe on how to use this function.
 
    
-.. function:: pp_combine ([-comoving], [-targetname str],
-	      [-manual_rates float, float],
-	      [-method {average, median, clipped}], [-backsub],
-	      [-keep_files], images)
+.. function:: pp_combine ([-comoving], [-targetname str], [-manual_rates float, float], [-method {average, median, clipped}], [-backsub], [-keep_files], images)
 
    image combination
 
@@ -442,9 +439,7 @@ Functions that provide additional functionality:
    function.
 
 
-.. function:: pp_stackedphotometry ([-comoving], [-filter str],
-	      [-method {average, median, clipped}], [-fixed_aprad
-	      float], [-snr float], [-solar], images)
+.. function:: pp_stackedphotometry ([-comoving], [-filter str], [-method {average, median, clipped}], [-fixed_aprad float], [-snr float], [-solar], images)
 
    perform automated aperture photometry on stacked images
 
