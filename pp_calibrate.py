@@ -2,13 +2,13 @@
 
 """ PP_CALIBRATE - match image databases against photometry catalogs
                    and derive magnitude zeropoint
-    v1.0: 2016-01-15, michael.mommert@nau.edu
+    v1.0: 2016-01-15, mommermiscience@gmail.com
 """
 from __future__ import print_function
 from __future__ import division
 
 # Photometry Pipeline
-# Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
+# Copyright (C) 2016-2018  Michael Mommert, mommermiscience@gmail.com
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -139,8 +139,12 @@ def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
             ('SkyMapper' in catalogname and
              filtername not in {'g', 'r', 'i'})):
 
-            n_transformed = cat.transform_filters(filtername) - \
-                cat.reject_sources_with(
+            n_transformed = cat.transform_filters(filtername)
+            if n_transformed == 0:
+                raise ValueError(('unable to transform {:s} to {:s}'.format(
+                    cat.catalogname, filtername) +
+                    '; refer to LOG file for details'))
+            n_transformed -= cat.reject_sources_with(
                 cat['_e_'+filtername+'mag'] > mag_accuracy)
 
             if display and n_transformed > 0:

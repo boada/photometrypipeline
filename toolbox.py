@@ -1,12 +1,12 @@
 """
 Toolbox for the Photometry Pipeline
-2016-03-09, michael.mommert@nau.edu
+2016-03-09, mommermiscience@gmail.com
 """
 from __future__ import print_function
 from __future__ import division
 
 # Photometry Pipeline
-# Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
+# Copyright (C) 2016-2018  Michael Mommert, mommermiscience@gmail.com
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -225,10 +225,15 @@ def skycenter(catalogs, ra_key='ra.deg', dec_key='dec.deg'):
 
 def if_val_in_dict(target_val, dic):
     """check if a value appears in a nested dict structure"""
+    result = False
     for key, val in dic.items():
         if type(val) is dict:
-            return if_val_in_dict(target_val, val)
+            if if_val_in_dict(target_val, val):
+                result = True
         elif type(val) is list:
-            return target_val in val
+            if target_val in val:
+                result = True
         else:
-            return target_val == val
+            if target_val == val:
+                result = True
+    return result

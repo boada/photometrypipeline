@@ -2,12 +2,11 @@
 CATALOG - class structure for dealing with astronomical catalogs,
           FITS_LDAC files, and sqlite databases.
 
-version 0.9, 2016-01-27, michael.mommert@nau.edu
+version 0.9, 2016-01-27, mommermiscience@gmail.com
 """
-from __future__ import print_function, division
 
 # Photometry Pipeline
-# Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
+# Copyright (C) 2016-2018  Michael Mommert, mommermiscience@gmail.com
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,28 +23,27 @@ from __future__ import print_function, division
 # <http://www.gnu.org/licenses/>.
 
 
-from past.utils import old_div
 import os
 import sys
-import numpy
 import logging
-# import urllib.request, urllib.error, urllib.parse
-import time
-import sqlite3 as sql
 
-# translates numpy datatypes to sql-readable datatypes
-sql.register_adapter(numpy.float64, float)
-sql.register_adapter(numpy.float32, float)
-sql.register_adapter(numpy.int64, int)
-sql.register_adapter(numpy.int32, int)
+import numpy as np
+import sqlite3 as sql
+import astropy.units as u
+import astropy.coordinates as coord
+from astropy.table import Table, Column
+from astropy import __version__ as astropyversion
+from astropy.io import fits
+import scipy.optimize as optimization
+import warnings
+warnings.simplefilter("ignore", UserWarning)
 
 try:
     from scipy import spatial
 except ImportError:
     print('Module scipy not found. Please install with: pip install scipy')
     sys.exit()
-from astropy.io import fits
-import scipy.optimize as optimization
+
 try:
     from astroquery.vizier import Vizier
     from astroquery.sdss import SDSS
@@ -53,23 +51,14 @@ except ImportError:
     print('Module astroquery not found. Please install with: pip install '
           'astroquery')
     sys.exit()
-import astropy.units as u
-import astropy.coordinates as coord
-from astropy.table import Table, Column
-from astropy import __version__ as astropyversion
 
-# only import if Python3 is used
-if sys.version_info > (3, 0):
-    from builtins import str
-    from future import standard_library
-    standard_library.install_aliases()
-    from builtins import zip
-    from builtins import filter
-    from builtins import range
-    from builtins import object
+# translates numpy datatypes to sql-readable datatypes
+sql.register_adapter(np.float64, float)
+sql.register_adapter(np.float32, float)
+sql.register_adapter(np.int64, int)
+sql.register_adapter(np.int32, int)
 
-
-# pipeline-related modules (only needed for testing)
+# import pp modules
 import _pp_conf
 
 # set Vizier server mirror
@@ -132,8 +121,8 @@ class catalog(object):
 
         self.data = self.data[condition]
 
-        logging.info('%s:reject %s sources' %
-                     (self.catalogname, n_raw-self.shape[0]))
+        logging.info('{:s}:reject {:d} sources'.format(self.catalogname,
+                                                       n_raw-self.shape[0]))
 
         return len(self.data)
 
@@ -147,8 +136,8 @@ class catalog(object):
         n_raw = self.shape[0]
         self.data = self.data[~condition]
 
-        logging.info('%s:reject %s sources' %
-                     (self.catalogname, n_raw-self.shape[0]))
+        logging.info('{:s}:reject {:d} sources'.format(self.catalogname,
+                                                       n_raw-self.shape[0]))
 
         return n_raw - len(self.data)
 
@@ -176,7 +165,7 @@ class catalog(object):
             self.data = Table()
 
         for i in range(len(field_names)):
-            self.data.add_column(Column(numpy.array(field_arrays[i]),
+            self.data.add_column(Column(np.array(field_arrays[i]),
                                         name=field_names[i],
                                         format=field_types[i]))
 
@@ -208,85 +197,74 @@ class catalog(object):
         # -> green column names in Vizier
 
         if self.display:
-            print(('query Vizier for %s at %7.3f/%+8.3f in '
-                   + 'a %.2f deg radius') %
-                  (self.catalogname, ra_deg, dec_deg, rad_deg), end=' ')
-            sys.stdout.flush()
-        logging.info(('query Vizier for %s at %7.3f/%+8.3f in '
-                      + 'a %.2f deg radius') %
-                     (self.catalogname, ra_deg, dec_deg, rad_deg))
+            print(('query Vizier for {:s} at {:7.3f}/{:+.3f} in '
+                   + 'a {:.2f} deg radius').format(self.catalogname,
+                                                   ra_deg, dec_deg,
+                                                   rad_deg),
+                  end=' ', flush=True)
+        logging.info(('query Vizier for {:s} at {:7.3f}/{:+.3f} in '
+                      + 'a {:.2f} deg radius').format(self.catalogname,
+                                                      ra_deg, dec_deg,
+                                                      rad_deg))
 
         field = coord.SkyCoord(ra=ra_deg, dec=dec_deg, unit=(u.deg, u.deg),
                                frame='icrs')
 
-        # set Vizier server
-        Vizier.VIZER_SERVER = 'vizier.cfa.harvard.edu'
+        # -----------------------------------------------------------------
 
-
-        # ---------------------------------------------------------------------
-
-        # use MAST query for Pan-STARRS; this is experimental!
+        # use vizier query for Pan-STARRS
         if self.catalogname == 'PANSTARRS':
-            import requests
-            from astropy.io.votable import parse_single_table, VOTableSpecWarning, VOWarning
-            import warnings
-            warnings.filterwarnings('ignore',
-                                    category=VOTableSpecWarning)
-            warnings.filterwarnings('ignore',
-                                    category=VOWarning)
 
-            server = 'https://archive.stsci.edu/panstarrs/search.php'
+            vquery = Vizier(columns=['objID', 'RAJ2000', 'DEJ2000',
+                                     'e_RAJ2000', 'e_DEJ2000',
+                                     'gmag', 'e_gmag',
+                                     'rmag', 'e_rmag',
+                                     'imag', 'e_imag',
+                                     'zmag', 'e_zmag',
+                                     'ymag', 'e_ymag'],
+                            column_filters={"rmag":
+                                            ("<{:f}".format(max_mag))},
+                            row_limit=max_sources,
+                            timeout=300)
 
-            if rad_deg > 0.5:
-                rad_deg = 0.499
-                logging.warning('MAST does currently not allow for PANSTARRS '
-                                'catalog queries with radii larger '
-                                'than 0.5 deg; clip radius to 0.5 deg')
-                print('MAST does currently not allow for PANSTARRS '
-                      'catalog queries with radii larger '
-                      'than 0.5 deg; clip radius to 0.5 deg')
-
-            r = requests.get(server,
-                             params={'RA': ra_deg, 'DEC': dec_deg,
-                                     'SR': rad_deg,
-                                     'max_records': int(max_sources),
-                                     'outputformat': 'VOTABLE',
-                                     'coordformat': 'FLOAT',
-                                     'ndetections': ('>%d' % max_mag)},
-                             timeout=300)
-
-            # write query data into local file
-            outf = open('panstarrs.xml', 'w')
-            outf.write(r.text)
-            outf.close()
-
-            # parse local file into astropy.table object
-            data = parse_single_table('panstarrs.xml')
-            self.data = data.to_table(use_names_over_ids=True)
+            try:
+                self.data = vquery.query_region(field,
+                                                radius=rad_deg*u.deg,
+                                                catalog="II/349/ps1",
+                                                cache=False)[0]
+            except IndexError:
+                if self.display:
+                    print('no data available from {:s}'.format(
+                        self.catalogname))
+                logging.error('no data available from {:s}'.format(
+                    self.catalogname))
+                return 0
 
             # rename column names using PP conventions
-            self.data.rename_column('objName', 'ident')
-            self.data.rename_column('raMean', 'ra.deg')
-            self.data.rename_column('decMean', 'dec.deg')
-            self.data.rename_column('raMeanErr', 'e_ra.deg')
-            self.data.rename_column('decMeanErr', 'e_dec.deg')
-            self.data.rename_column('gMeanPSFMag', 'gp1mag')
-            self.data.rename_column('gMeanPSFMagErr', 'e_gp1mag')
-            self.data.rename_column('rMeanPSFMag', 'rp1mag')
-            self.data.rename_column('rMeanPSFMagErr', 'e_rp1mag')
-            self.data.rename_column('iMeanPSFMag', 'ip1mag')
-            self.data.rename_column('iMeanPSFMagErr', 'e_ip1mag')
-            self.data.rename_column('zMeanPSFMag', 'zp1mag')
-            self.data.rename_column('zMeanPSFMagErr', 'e_zp1mag')
-            self.data.rename_column('yMeanPSFMag', 'yp1mag')
-            self.data.rename_column('yMeanPSFMagErr', 'e_yp1mag')
+            self.data.rename_column('objID', 'ident')
+            self.data.rename_column('RAJ2000', 'ra.deg')
+            self.data.rename_column('DEJ2000', 'dec.deg')
+            self.data.rename_column('e_RAJ2000', 'e_ra.deg')
+            self.data['e_ra.deg'].convert_unit_to(u.deg)
+            self.data.rename_column('e_DEJ2000', 'e_dec.deg')
+            self.data['e_dec.deg'].convert_unit_to(u.deg)
+            self.data.rename_column('gmag', 'gp1mag')
+            self.data.rename_column('e_gmag', 'e_gp1mag')
+            self.data.rename_column('rmag', 'rp1mag')
+            self.data.rename_column('e_rmag', 'e_rp1mag')
+            self.data.rename_column('imag', 'ip1mag')
+            self.data.rename_column('e_imag', 'e_ip1mag')
+            self.data.rename_column('zmag', 'zp1mag')
+            self.data.rename_column('e_zmag', 'e_zp1mag')
+            self.data.rename_column('ymag', 'yp1mag')
+            self.data.rename_column('e_ymag', 'e_yp1mag')
 
             # clip self.data to enforce magnitude error limits
             self.data = self.data[self.data['e_rp1mag'] <= 0.03]
 
         # --------------------------------------------------------------------
         # use astroquery TAP query for SkyMapper; this is experimental!
-        if self.catalogname == 'SkyMapper':
+        elif self.catalogname == 'SkyMapper':
             from astroquery.utils.tap.core import TapPlus
 
             skymap = TapPlus(url=("http://skymappertap.asvo.nci.org.au/"
@@ -333,24 +311,29 @@ class catalog(object):
         # --------------------------------------------------------------------
 
         elif self.catalogname == 'GAIA':
-            # astrometric catalog
+            # astrometric and photometric catalog (as of DR2)
             vquery = Vizier(columns=['Source', 'RA_ICRS', 'DE_ICRS',
                                      'e_RA_ICRS', 'e_DE_ICRS', 'pmRA',
-                                     'pmDE', 'phot_g_mean_mag'],
+                                     'pmDE', 'Epoch',
+                                     'Gmag', 'e_Gmag',
+                                     'BPmag', 'e_BPmag',
+                                     'RPmag', 'eRPmag'],
                             column_filters={"phot_g_mean_mag":
-                                            ("<%f" % max_mag)},
+                                            ("<{:f}".format(max_mag))},
                             row_limit=max_sources,
                             timeout=300)
 
             try:
                 self.data = vquery.query_region(field,
-                                                width=("%fd" % rad_deg),
-                                                catalog="I/337/gaia",
+                                                radius=rad_deg*u.deg,
+                                                catalog="I/345/gaia2",
                                                 cache=False)[0]
             except IndexError:
                 if self.display:
-                    print('no data available from %s' % self.catalogname)
-                logging.error('no data available from %s' % self.catalogname)
+                    print('no data available from {:s}'.format(
+                        self.catalogname))
+                logging.error('no data available from {:s}'.format(
+                    self.catalogname))
                 return 0
 
             # rename column names using PP conventions
@@ -361,10 +344,7 @@ class catalog(object):
             self.data['e_ra.deg'].convert_unit_to(u.deg)
             self.data.rename_column('e_DE_ICRS', 'e_dec.deg')
             self.data['e_dec.deg'].convert_unit_to(u.deg)
-            self.data.rename_column('__Gmag_', 'mag')
-
-            self.data.add_column(Column(numpy.ones(len(self.data))*2457023.5,
-                                        name='epoch_jd', unit=u.day))
+            self.data.rename_column('Epoch', 'epoch_yr')
 
             # TBD:
             # - implement proper error ellipse handling
@@ -378,19 +358,21 @@ class catalog(object):
                                      'e_RA_ICRS', 'e_DE_ICRS', 'pmRA',
                                      'pmDE', 'phot_g_mean_mag'],
                             column_filters={"phot_g_mean_mag":
-                                            ("<%f" % max_mag)},
+                                            ("<{:f}".format(max_mag))},
                             row_limit=max_sources,
                             timeout=300)
 
             try:
                 self.data = vquery.query_region(field,
-                                                width=("%fd" % rad_deg),
+                                                radius=rad_deg.u.deg,
                                                 catalog="I/337/tgas",
                                                 cache=False)[0]
             except IndexError:
                 if self.display:
-                    print('no data available from %s' % self.catalogname)
-                logging.error('no data available from %s' % self.catalogname)
+                    print('no data available from {:s}'.format(
+                        self.catalogname))
+                logging.error('no data available from {:s}'.format(
+                    self.catalogname))
                 return 0
 
             # rename column names using PP conventions
@@ -403,7 +385,7 @@ class catalog(object):
             self.data['e_dec.deg'].convert_unit_to(u.deg)
             self.data.rename_column('__Gmag_', 'mag')
 
-            self.data.add_column(Column(numpy.ones(len(self.data))*2457023.5,
+            self.data.add_column(Column(np.ones(len(self.data))*2457023.5,
                                         name='epoch_jd', unit=u.day))
 
             # TBD:
@@ -417,18 +399,20 @@ class catalog(object):
                                      'Hmag', 'e_Hmag', 'Kmag', 'e_Kmag',
                                      'Qflg', 'Rflg'],
                             column_filters={"Jmag":
-                                            ("<%f" % max_mag)},
+                                            ("<{:f}".format(max_mag))},
                             row_limit=max_sources)
 
             try:
                 self.data = vquery.query_region(field,
-                                                width=("%fd" % rad_deg),
+                                                radius=rad_deg*u.deg,
                                                 catalog="II/246/out",
                                                 cache=False)[0]
             except IndexError:
                 if self.display:
-                    print('no data available from %s' % self.catalogname)
-                logging.error('no data available from %s' % self.catalogname)
+                    print('no data available from {:s}'.format(
+                        self.catalogname))
+                logging.error('no data available from {:s}'.format(
+                    self.catalogname))
                 return 0
 
             # filter columns to only have really good detections
@@ -457,23 +441,23 @@ class catalog(object):
             #   add respective columns
             self.data['errPA'][self.data['errPA'] == 0] = 1  # workaround
 
-            arc_xopt = numpy.arctan(-self.data['errMin']/self.data['errMaj'] *
-                                    numpy.tan(self.data['errPA'].to(u.rad)))
-            ra_err = abs(self.data['errMaj']*numpy.cos(arc_xopt) *
-                         numpy.cos(self.data['errPA'].to(u.rad)) -
-                         self.data['errMin']*numpy.sin(arc_xopt) *
-                         numpy.sin(self.data['errPA'].to(u.rad)))
+            arc_xopt = np.arctan(-self.data['errMin']/self.data['errMaj'] *
+                                 np.tan(self.data['errPA'].to(u.rad)))
+            ra_err = abs(self.data['errMaj']*np.cos(arc_xopt) *
+                         np.cos(self.data['errPA'].to(u.rad)) -
+                         self.data['errMin']*np.sin(arc_xopt) *
+                         np.sin(self.data['errPA'].to(u.rad)))
             self.data.add_column(Column(data=ra_err*1000,
                                         name='e_ra.deg', unit=u.mas),
                                  index=2)
 
-            arc_yopt = numpy.arctan(self.data['errMin']/self.data['errMaj'] *
-                                    numpy.cos(self.data['errPA'].to(u.rad)) /
-                                    numpy.sin(self.data['errPA'].to(u.rad)))
-            dec_err = abs(self.data['errMaj']*numpy.cos(arc_yopt) *
-                          numpy.sin(self.data['errPA'].to(u.rad)) +
-                          self.data['errMin']*numpy.sin(arc_yopt) *
-                          numpy.cos(self.data['errPA'].to(u.rad)))
+            arc_yopt = np.arctan(self.data['errMin']/self.data['errMaj'] *
+                                 np.cos(self.data['errPA'].to(u.rad)) /
+                                 np.sin(self.data['errPA'].to(u.rad)))
+            dec_err = abs(self.data['errMaj']*np.cos(arc_yopt) *
+                          np.sin(self.data['errPA'].to(u.rad)) +
+                          self.data['errMin']*np.sin(arc_yopt) *
+                          np.cos(self.data['errPA'].to(u.rad)))
             self.data.add_column(Column(data=dec_err*1000,
                                         name='e_dec.deg', unit=u.mas), index=3)
 
@@ -487,18 +471,20 @@ class catalog(object):
             vquery = Vizier(columns=['URAT1', 'RAJ2000', 'DEJ2000',
                                      'sigm', 'f.mag', 'e_f.mag', ],
                             column_filters={"f.mag":
-                                            ("<%f" % max_mag)},
+                                            ("<{:f}".format(max_mag))},
                             row_limit=max_sources)
 
             try:
                 self.data = vquery.query_region(field,
-                                                width=("%fd" % rad_deg),
+                                                radius=rad_deg*u.deg,
                                                 catalog="I/329/urat1",
                                                 cache=False)[0]
             except IndexError:
                 if self.display:
-                    print('no data available from %s' % self.catalogname)
-                logging.error('no data available from %s' % self.catalogname)
+                    print('no data available from {:s}'.format(
+                        self.catalogname))
+                logging.error('no data available from {:s}'.format(
+                    self.catalogname))
                 return 0
 
             # rename column names using PP conventions
@@ -526,18 +512,20 @@ class catalog(object):
                                      'Bmag', 'e_Bmag', "g'mag", "e_g'mag",
                                      "r'mag", "e_r'mag", "i'mag", "e_i'mag"],
                             column_filters={"Vmag":
-                                            ("<%f" % max_mag)},
+                                            ("<{:f}".format(max_mag))},
                             row_limit=max_sources)
 
             try:
                 self.data = vquery.query_region(field,
-                                                width=("%fd" % rad_deg),
+                                                radius=rad_deg*u.deg,
                                                 catalog="II/336/apass9",
                                                 cache=False)[0]
             except IndexError:
                 if self.display:
-                    print('no data available from %s' % self.catalogname)
-                logging.error('no data available from %s' % self.catalogname)
+                    print('no data available from {:s}'.format(
+                        self.catalogname))
+                logging.error('no data available from {:s}'.format(
+                    self.catalogname))
                 return 0
 
             # rename column names using PP conventions
@@ -559,19 +547,22 @@ class catalog(object):
                                      'e_DE_ICRS', 'umag', 'e_umag',
                                      'gmag', 'e_gmag', 'rmag', 'e_rmag',
                                      'imag', 'e_imag', 'zmag', 'e_zmag'],
-                            column_filters={"gmag": ("<%f" % max_mag),
+                            column_filters={"gmag":
+                                            ("<{:f}".format(max_mag)),
                                             "mode": "1",
                                             "q_mode": "+"},
                             row_limit=max_sources)
             try:
                 self.data = vquery.query_region(field,
-                                                width=("%fd" % rad_deg),
+                                                radius=rad_deg*u.deg,
                                                 catalog="V/139/sdss9",
                                                 cache=False)[0]
             except IndexError:
                 if self.display:
-                    print('no data available from %s' % self.catalogname)
-                logging.error('no data available from %s' % self.catalogname)
+                    print('no data available from {:s}'.format(
+                        self.catalogname))
+                logging.error('no data available from {:s}'.format(
+                    self.catalogname))
                 return 0
 
             # rename column names using PP conventions
@@ -588,32 +579,35 @@ class catalog(object):
 
         elif self.catalogname == 'SDSS-R13':
             try:
-                self.data = SDSS.query_region(field,
-                                              radius=("%fd" % rad_deg),
-                                              photoobj_fields=['objID', 'ra',
-                                                               'dec',
-                                                               'raErr',
-                                                               'decErr',
-                                                               'fiberMag_u',
-                                                               'fiberMagErr_u',
-                                                               'fiberMag_g',
-                                                               'fiberMagErr_g',
-                                                               'fiberMag_r',
-                                                               'fiberMagErr_r',
-                                                               'fiberMag_i',
-                                                               'fiberMagErr_i',
-                                                               'fiberMag_z',
-                                                               'fiberMagErr_z',
-                                                               'mode',
-                                                               'clean',
-                                                               'type'],
-                                              timeout=180,
-                                              data_release=13,
-                                              cache=False)
+                self.data = SDSS.query_region(
+                    field,
+                    radius=("{:f}d".format(rad_deg)),
+                    photoobj_fields=['objID', 'ra',
+                                     'dec',
+                                     'raErr',
+                                     'decErr',
+                                     'fiberMag_u',
+                                     'fiberMagErr_u',
+                                     'fiberMag_g',
+                                     'fiberMagErr_g',
+                                     'fiberMag_r',
+                                     'fiberMagErr_r',
+                                     'fiberMag_i',
+                                     'fiberMagErr_i',
+                                     'fiberMag_z',
+                                     'fiberMagErr_z',
+                                     'mode',
+                                     'clean',
+                                     'type'],
+                    timeout=180,
+                    data_release=13,
+                    cache=False)
             except IndexError:
                 if self.display:
-                    print('no data available from %s' % self.catalogname)
-                logging.error('no data available from %s' % self.catalogname)
+                    print('no data available from {:s}'.format(
+                        self.catalogname))
+                logging.error('no data available from {:s}'.format(
+                    self.catalogname))
                 return 0
 
             # apply some quality masks
@@ -625,8 +619,10 @@ class catalog(object):
                 mask = mask_primary & mask_clean & mask_star & mask_bright
             except TypeError:
                 if self.display:
-                    print('no data available from %s' % self.catalogname)
-                logging.error('no data available from %s' % self.catalogname)
+                    print('no data available from {:s}'.format(
+                        self.catalogname))
+                logging.error('no data available from {:s}'.format(
+                    self.catalogname))
                 return 0
 
             self.data = self.data[mask]
@@ -657,11 +653,19 @@ class catalog(object):
             self.data['e_ra.deg'] = self.data['e_ra.deg'] * u.arcsec
             self.data['e_dec.deg'] = self.data['e_dec.deg'] * u.arcsec
 
-        if self.display:
-            print('%d sources retrieved.' % len(self.data))
-        logging.info('%d sources retrieved' % len(self.data))
+        else:
+            if self.display:
+                print('catalog {:s} not available.'.format(
+                    self.catalogname))
+            logging.error('catalog {:s} not available.'.format(
+                self.catalogname))
+            return 0
 
-        self.history = '%d sources downloaded' % len(self.data)
+        if self.display:
+            print('{:d} sources retrieved.'.format(len(self.data)))
+        logging.info('{:d} sources retrieved'.format(len(self.data)))
+
+        self.history = '{:d} sources downloaded'.format(len(self.data))
 
         # convert all coordinate uncertainties to degrees
         self.data['e_ra.deg'] = self.data['e_ra.deg'].to(u.deg)
@@ -691,10 +695,12 @@ class catalog(object):
         hdulist = fits.open(filename, ignore_missing_end=True)
 
         if len(hdulist) < 3:
-            print(('ERROR: %s seems to be empty; check LOG file if ' +
-                   'Source Extractor ran properly') % filename)
-            logging.error(('ERROR: %s seems to be empty; check LOG file if ' +
-                           'Source Extractor ran properly') % filename)
+            print(('ERROR: {:s} seems to be empty; check LOG file if ' +
+                   'Source Extractor ran properly').format(filename))
+            logging.error(('ERROR: {:s} seems to be empty; '
+                           'check LOG file if ' +
+                           'Source Extractor ran properly').format(
+                               filename))
             return None
 
 
@@ -707,7 +713,7 @@ class catalog(object):
             if telescope_keyword in line:
                 telescope = line.split('\'')[1]
         self.catalogname = filename
-        self.origin = '%s;%s' % (telescope.strip(), fits_filename)
+        self.origin = '{:s};{:s}'.format(telescope.strip(), fits_filename)
         self.magsys = 'instrumental'
 
         # reject flagged sources (if requested)
@@ -730,11 +736,12 @@ class catalog(object):
             self.data.rename_column('YWIN_WORLD', 'dec.deg')
 
         # force positive RA values
-        flip_idc = numpy.where(self.data['ra.deg'] < 0)[0]
+        flip_idc = np.where(self.data['ra.deg'] < 0)[0]
         self.data['ra.deg'][flip_idc] += 360
 
-        logging.info('read %d sources in %d columns from LDAC file %s' %
-                     (self.shape[0], self.shape[1], filename))
+        logging.info(('read {:d} sources in {:d} columns '
+                      'from LDAC file {:s}').format(
+                     self.shape[0], self.shape[1], filename))
 
         hdulist.close()
 
@@ -789,12 +796,12 @@ class catalog(object):
                                      disp='F8.4',
                                      format='1E',
                                      unit='mag',
-                                     array=numpy.ones(len(self.data))*0.01))
+                                     array=np.ones(len(self.data))*0.01))
         data_cols.append(fits.Column(name='OBSDATE',
                                      disp='F13.8',
                                      format='1D',
                                      unit='yr',
-                                     array=numpy.ones(len(self.data))*2015.0))
+                                     array=np.ones(len(self.data))*2015.0))
 
         datahdu = fits.BinTableHDU.from_columns(fits.ColDefs(data_cols))
         datahdu.header['EXTNAME'] = ('LDAC_OBJECTS')
@@ -810,46 +817,46 @@ class catalog(object):
         else:
             hdulist.writeto(ldac_filename, clobber=True)
 
-        logging.info('wrote %d sources from %s to LDAC file' %
-                     (nsrc, ldac_filename))
+        logging.info('wrote {:d} sources from {:s} to LDAC file'.format(
+                     nsrc, ldac_filename))
 
         return nsrc
 
     # ascii interface
 
-    def write_ascii(self, filename):
-        """
-        write catalog to ascii table
-        input: target filename
-        return: number of sources written to file
-        """
+    # def write_ascii(self, filename):
+    #     """
+    #     write catalog to ascii table
+    #     input: target filename
+    #     return: number of sources written to file
+    #     """
 
-        # prepare headerline and formatline
-        legend, headerline, formatline = '', '', ''
-        for idx in range(len(self.fields)):
-            legend += '%d - %s\n' % (idx, self.fields[idx])
-            headerline += ('|%13s ' % str(self.fields[idx]))
-            if 'E' in str(self.data.formats[idx]):
-                formatline += '%15E'
-            elif 'D' in str(self.data.formats[idx]):
-                formatline += '%15f'
-            elif 'I' in str(self.data.formats[idx]) or \
-                 'J' in str(self.data.formats[idx]):
-                formatline += '%15d'
+    #     # prepare headerline and formatline
+    #     legend, headerline, formatline = '', '', ''
+    #     for idx in range(len(self.fields)):
+    #         legend += '%d - %s\n' % (idx, self.fields[idx])
+    #         headerline += ('|%13s ' % str(self.fields[idx]))
+    #         if 'E' in str(self.data.formats[idx]):
+    #             formatline += '%15E'
+    #         elif 'D' in str(self.data.formats[idx]):
+    #             formatline += '%15f'
+    #         elif 'I' in str(self.data.formats[idx]) or \
+    #              'J' in str(self.data.formats[idx]):
+    #             formatline += '%15d'
 
-        # write data into file
-        numpy.savetxt(filename, self.data, fmt=formatline,
-                      header=legend+headerline)
+    #     # write data into file
+    #     np.savetxt(filename, self.data, fmt=formatline,
+    #                header=legend+headerline)
 
-        logging.info('wrote %d sources from %s to ASCII file %s' %
-                     (self.shape[0], self.catalogname, filename))
+    #     logging.info('wrote %d sources from %s to ASCII file %s' %
+    #                  (self.shape[0], self.catalogname, filename))
 
-        return self.shape[0]
+    #     return self.shape[0]
 
     # SQLite interface
 
     def write_database(self, filename):
-        """ 
+        """
         write catalog object to SQLite database file
         input: target filename
         output: number of sources written to file
@@ -873,14 +880,14 @@ class catalog(object):
         table_cmd = "CREATE TABLE data ("
         for key_idx, key in enumerate(self.fields):
             db_key = key
-            if type(self.data[key][0]) == numpy.float32 \
-               or type(self.data[key][0]) == numpy.float64:
-                table_cmd += "'%s' REAL" % db_key
-            elif type(self.data[key][0]) == numpy.int16 \
-                    or type(self.data[key][0]) == numpy.int32:
-                table_cmd += "'%s' INTEGER" % db_key
-            elif type(self.data[key][0]) == numpy.string_:
-                table_cmd += "'%s' TEXT" % db_key
+            if type(self.data[key][0]) == np.float32 \
+               or type(self.data[key][0]) == np.float64:
+                table_cmd += "'{:s}' REAL".format(db_key)
+            elif type(self.data[key][0]) == np.int16 \
+                    or type(self.data[key][0]) == np.int32:
+                table_cmd += "'{:s}' INTEGER".format(db_key)
+            elif type(self.data[key][0]) == np.string_:
+                table_cmd += "'{:s}' TEXT".format(db_key)
             else:
                 print('unknown data type: ' + type(self.data[key][0]))
             if key_idx < len(self.fields)-1:
@@ -890,8 +897,8 @@ class catalog(object):
         db.execute(table_cmd)
 
         # create a data array in which data types are converted to SQL types
-        sqltypes = {numpy.float32: numpy.float64, numpy.float64: numpy.float64,
-                    numpy.int16: numpy.int64, numpy.int32: numpy.int64}
+        sqltypes = {np.float32: np.float64, np.float64: np.float64,
+                    np.int16: np.int64, np.int32: np.int64}
 
         data_cols = [self.data[key].astype(sqltypes[type(self.data[key][0])])
                      for key in self.fields]
@@ -904,13 +911,18 @@ class catalog(object):
         db_conn.commit()
 
         # return number of objects written to database
-        db.execute("SELECT COUNT(DISTINCT %s) FROM data" % self.fields[0].name)
+        db.execute(
+            "SELECT COUNT(DISTINCT {:s}) FROM data".format(
+                self.fields[0].name))
         n_obj = db.fetchall()[0][0]
 
-        logging.info('wrote %d sources from catalog %s to database file %s' %
-                     (n_obj, " | ".join([self.catalogname, self.origin,
-                                         self.history]),
-                      filename))
+        logging.info(('wrote {:d} sources from catalog {:s} '
+                      'to database file {:s}'.format(
+                          n_obj,
+                          " | ".join([self.catalogname,
+                                      self.origin,
+                                      self.history]),
+                          filename)))
 
         return n_obj
 
@@ -945,8 +957,8 @@ class catalog(object):
 
         # read in field names and types
         fieldnames, types = [], []
-        type_dict = {float: numpy.float64,
-                     int: numpy.int64, str: numpy.string_}
+        type_dict = {float: np.float64,
+                     int: np.int64, str: np.string_}
         for key_idx, key in enumerate(db.description):
             fieldnames.append(key[0])
             # if isinstance(rows[0][key_idx], bytes):
@@ -961,7 +973,7 @@ class catalog(object):
         for row in rows:
             for col in range(len(row)):
                 data[col].append(types[col](row[col]))
-        type_dict = {numpy.float64: 'E', numpy.int64: 'I', numpy.string_: 'A'}
+        type_dict = {np.float64: 'E', np.int64: 'I', np.string_: 'A'}
         columns = [fits.Column(name=fieldnames[idx],
                                format=type_dict[types[idx]],
                                array=data[idx])
@@ -1002,94 +1014,74 @@ class catalog(object):
              ('SkyMapper' in self.catalogname)) and
                 (targetfilter in {'B', 'V', 'R', 'I'})):
 
-            logging.info(('trying to transform %d SDSS sources to '
-                          + '%s') % (self.shape[0], targetfilter))
+            logging.info(('trying to transform {:d} SDSS sources to '
+                          + '{:s}').format(self.shape[0], targetfilter))
 
-            mags = numpy.array([self['gmag'], self['rmag'],
-                                self['imag'],
-                                self['e_gmag'],
-                                self['e_rmag'],
-                                self['e_imag'],
-                                self['umag'],
-                                self['e_umag']])
-
-            # ### template for adding astropy.table columns
-            # self.data.add_column(Column(self.data['Jmag']+1.7495*cidx**3
-            #                             - 2.7785*cidx**2
-            #                             + 5.215*cidx + 0.1980,
-            #                             name='_Bmag',
-            #                             unit=u.mag))
-
-            # lbl   = {'_Bmag':0 , '_e_Bmag': 1, '_Vmag': 2, '_e_Vmag': 3,
-            #          '_Rmag': 4, '_e_Rmag': 5, '_Imag': 6, '_e_Imag': 7}
-            # nmags = [numpy.zeros(self.shape[0]) for i in range(len(lbl))]
+            mags = np.array([self['gmag'].data, self['rmag'].data,
+                             self['imag'].data,
+                             self['e_gmag'].data,
+                             self['e_rmag'].data,
+                             self['e_imag'].data,
+                             self['umag'].data,
+                             self['e_umag'].data])
 
             # sort out sources that do not meet the C&G requirements
             keep_idc = (mags[1]-mags[2] > 0.08) & (mags[1]-mags[2] < 0.5) & \
-                       (mags[0]-mags[1] > 0.2) & (mags[0]-mags[1] < 1.4) & \
-                       (mags[0] >= 14.5) & (mags[0] < 19.5) & \
-                       (mags[1] >= 14.5) & (mags[1] < 19.5) & \
-                       (mags[2] >= 14.5) & (mags[2] < 19.5)
-            filtered_mags = numpy.array([mags[i][keep_idc]
-                                         for i in range(len(mags))])
+                (mags[0]-mags[1] > 0.2) & (mags[0]-mags[1] < 1.4) & \
+                (mags[0] >= 14.5) & (mags[0] < 19.5) & \
+                (mags[1] >= 14.5) & (mags[1] < 19.5) & \
+                (mags[2] >= 14.5) & (mags[2] < 19.5)
+            filtered_mags = np.array([mags[i][keep_idc]
+                                      for i in range(len(mags))])
 
             # ... derive a linear best fit and remove outliers (>3 sigma)
-            ri = numpy.array(filtered_mags[1]) - numpy.array(filtered_mags[2])
-            gr = numpy.array(filtered_mags[0]) - numpy.array(filtered_mags[1])
-
+            ri = np.array(filtered_mags[1]) - np.array(filtered_mags[2])
+            gr = np.array(filtered_mags[0]) - np.array(filtered_mags[1])
             if len(ri) == 0 or len(gr) == 0:
-                logging.warning('no suitable stars for transformation to %s' %
-                                targetfilter)
+                logging.warning(('no suitable stars for transformation '
+                                 'to {:s}').format(targetfilter))
                 return 0
 
             param = optimization.curve_fit(self.lin_func, ri, gr, [1, 0])[0]
-            resid = numpy.sqrt((old_div((ri+param[0]*gr-param[0]*param[1]),
-                                        (param[0]**2+1)))**2 +
-                               (param[0]*(ri+param[0]*gr-param[0]*param[1]) /
-                                (param[0]**2+1)+param[1]-gr)**2)
-            remove = numpy.where(numpy.array(resid) > 3.*numpy.std(resid))[0]
+            resid = np.sqrt(((ri+param[0]*gr-param[0]*param[1]) /
+                             (param[0]**2+1))**2 +
+                            (param[0]*(ri+param[0]*gr-param[0]*param[1]) /
+                             (param[0]**2+1)+param[1]-gr)**2)
+            remove = np.where(np.array(resid) > 3.*np.std(resid))[0]
 
-            keep = [idx for idx in numpy.arange(len(keep_idc))[keep_idc]
+            keep = [idx for idx in np.arange(len(keep_idc))[keep_idc]
                     if idx not in set(remove)]
 
             # transformed magnitudes; uncertainties through Gaussian and C&G2008
-            nmags = numpy.array([numpy.empty(len(mags[0])),
-                                 numpy.empty(len(mags[0]))])
+            nmags = np.array([np.empty(len(mags[0])),
+                              np.empty(len(mags[0]))])
             if targetfilter == 'U':
                 nmags[0] = mags[6] - 0.854
-                nmags[1] = numpy.sqrt(mags[7]**2 + 0.007**2)
+                nmags[1] = np.sqrt(mags[7]**2 + 0.007**2)
             elif targetfilter == 'B':
                 nmags[0] = mags[0] + 0.327*(mags[0] - mags[1]) + 0.216
-                nmags[1] = numpy.sqrt(((1+0.327)*mags[3])**2
-                                      + (0.327*mags[4])**2
-                                      + ((mags[0]-mags[1])*0.047)**2
-                                      + 0.027**2)
+                nmags[1] = np.sqrt(((1+0.327)*mags[3])**2
+                                   + (0.327*mags[4])**2
+                                   + ((mags[0]-mags[1])*0.047)**2
+                                   + 0.027**2)
             elif targetfilter == 'V':
                 nmags[0] = mags[0] - 0.587*(mags[0] - mags[1]) - 0.011
-                nmags[1] = numpy.sqrt(((1+0.587)*mags[3])**2
-                                      + (0.587*mags[4])**2
-                                      + ((mags[0]-mags[1])*0.022)**2
-                                      + 0.011**2)
+                nmags[1] = np.sqrt(((1+0.587)*mags[3])**2
+                                   + (0.587*mags[4])**2
+                                   + ((mags[0]-mags[1])*0.022)**2
+                                   + 0.011**2)
             elif targetfilter == 'R':
                 nmags[0] = mags[1] - 0.272*(mags[1] - mags[2]) - 0.159
-                nmags[1] = numpy.sqrt(((1-0.272)*mags[4])**2
-                                      + (0.272*mags[5])**2
-                                      + ((mags[1]-mags[2])*0.092)**2
-                                      + 0.022**2)
-            # elif targetfilter == 'I':
-            #     nmags[0]   = mags[2] - 0.337*(mags[1] - mags[2]) - 0.370
-            #     nmags[1] = numpy.sqrt(((1+0.337)*mags[5])**2 \
-            #                           + (0.337*mags[4])**2 \
-            #                           + ((mags[1]-mags[2])*0.191)**2 \
-            #                           + 0.041**2)
-
-            # experimental!!!!! Based on Connor's transformations
+                nmags[1] = np.sqrt(((1-0.272)*mags[4])**2
+                                   + (0.272*mags[5])**2
+                                   + ((mags[1]-mags[2])*0.092)**2
+                                   + 0.022**2)
             elif targetfilter == 'I':
-                nmags[0] = mags[2] - 0.2526*(mags[1] - mags[2]) - 0.3636
-                nmags[1] = numpy.sqrt(((1+0.2526)*mags[5])**2
-                                      + (0.2526*mags[4])**2
-                                      + ((mags[1]-mags[2])*0.191)**2
-                                      + 0.028**2)
+                nmags[0] = mags[2] - 0.337*(mags[1] - mags[2]) - 0.370
+                nmags[1] = np.sqrt(((1+0.337)*mags[5])**2
+                                   + (0.337*mags[4])**2
+                                   + ((mags[1]-mags[2])*0.191)**2
+                                   + 0.041**2)
 
             # add new filter and according uncertainty to catalog
             self.add_field('_'+targetfilter+'mag', nmags[0])
@@ -1100,12 +1092,14 @@ class catalog(object):
 
             if '_transformed' not in self.catalogname:
                 self.catalogname += '_transformed'
-                self.history += ', %d transformed to %s (Vega)' % \
-                                (self.shape[0], targetfilter)
-                self.magsystem = 'AB (ugriz), Vega (%s)' % targetfilter
+                self.history += ', {:d} transformed to {:s} (Vega)'.format(
+                                self.shape[0], targetfilter)
+                self.magsystem = 'AB (ugriz), Vega ({:s})'.format(
+                    targetfilter)
 
-            logging.info(('%d sources sucessfully transformed to %s' %
-                          (self.shape[0], targetfilter)))
+            logging.info(('{:d} sources sucessfully '
+                          'transformed to {:s}').format(self.shape[0],
+                                                        targetfilter))
 
             return self.shape[0]
 
@@ -1116,34 +1110,36 @@ class catalog(object):
               (targetfilter == 'R' or targetfilter == 'I')
               and self.magsystem == 'Vega'):
 
-            logging.info('trying to transform %d %s sources to %s' %
-                         (self.shape[0], self.catalogname, targetfilter))
+            logging.info(('trying to transform {:d} {:s} sources '
+                          'to {:s}'.format(self.shape[0],
+                                           self.catalogname,
+                                           targetfilter)))
 
             # transformations based on Chonis & Gaskell 2008, AJ, 135
-            mags = numpy.array([self['rmag'],
-                                self['imag'],
-                                self['e_rmag'],
-                                self['e_imag']])
+            mags = np.array([self['rmag'].data,
+                             self['imag'].data,
+                             self['e_rmag'].data,
+                             self['e_imag'].data])
 
             # sort out sources that do not meet the C&G requirements
             keep_idc = (mags[0]-mags[1] > 0.08) & (mags[0]-mags[1] < 0.5)
 
             # transformed magnitudes; uncertainties through Gaussian and C&G2008
-            nmags = numpy.array([numpy.empty(len(mags[0])),
-                                 numpy.empty(len(mags[0]))])
+            nmags = np.array([np.empty(len(mags[0])),
+                              np.empty(len(mags[0]))])
 
             if targetfilter == 'R':
                 nmags[0] = mags[0] - 0.272*(mags[0] - mags[1]) - 0.159
-                nmags[1] = numpy.sqrt(((1-0.272)*mags[2])**2
-                                      + (0.272*mags[3])**2
-                                      + ((mags[0]-mags[1])*0.092)**2
-                                      + 0.022**2)
+                nmags[1] = np.sqrt(((1-0.272)*mags[2])**2
+                                   + (0.272*mags[3])**2
+                                   + ((mags[0]-mags[1])*0.092)**2
+                                   + 0.022**2)
             elif targetfilter == 'I':
                 nmags[0] = mags[1] - 0.337*(mags[0] - mags[1]) - 0.370
-                nmags[1] = numpy.sqrt(((1+0.337)*mags[3])**2
-                                      + (0.337*mags[2])**2
-                                      + ((mags[0]-mags[1])*0.191)**2
-                                      + 0.041**2)
+                nmags[1] = np.sqrt(((1+0.337)*mags[3])**2
+                                   + (0.337*mags[2])**2
+                                   + ((mags[0]-mags[1])*0.191)**2
+                                   + 0.041**2)
 
             # add new filter and according uncertainty to catalog
             self.add_field('_'+targetfilter+'mag', nmags[0])
@@ -1154,12 +1150,12 @@ class catalog(object):
 
             if '_transformed' not in self.catalogname:
                 self.catalogname += '_transformed'
-                self.history += ', %d transformed to %s (Vega)' % \
-                    (self.shape[0], targetfilter)
+                self.history += ', {:d} transformed to {:s} (Vega)'.format(
+                    self.shape[0], targetfilter)
                 self.magsystem = 'Vega'
 
-            logging.info('%d sources sucessfully transformed to %s' %
-                         (self.shape[0], targetfilter))
+            logging.info(('{:d} sources sucessfully transformed '
+                          'to {:s}').format(self.shape[0], targetfilter))
 
             return self.shape[0]
 
@@ -1169,17 +1165,17 @@ class catalog(object):
                               'H', 'K'}) and \
                 (self.magsystem == 'Vega'):
 
-            logging.info(('trying to transform %d 2MASS sources to '
-                          + 'UKIRT YZJHK') % self.shape[0])
+            logging.info(('trying to transform {:d} 2MASS sources to '
+                          + 'UKIRT YZJHK').format(self.shape[0]))
 
             # transformations using the recipe by Hodgkin et al. 2009, MNRAS
-            mags = [self['Jmag'], self['Hmag'], self['Ksmag'],
-                    self['e_Jmag'], self['e_Hmag'],
-                    self['e_Ksmag']]
+            mags = [self['Jmag'].data, self['Hmag'].data,
+                    self['Ksmag'].data, self['e_Jmag'].data,
+                    self['e_Hmag'].data, self['e_Ksmag'].data]
             lbl = {'_Ymag': 0, '_e_Ymag': 1, '_Zmag': 2, '_e_Zmag': 3,
                    '_Jmag': 4, '_e_Jmag': 5, '_Hmag': 6, '_e_Hmag': 7,
                    '_Kmag': 8, '_e_Kmag': 9}
-            nmags = [numpy.zeros(self.shape[0]) for i in range(len(lbl))]
+            nmags = [np.zeros(self.shape[0]) for i in range(len(lbl))]
 
             for idx in range(self.shape[0]):
                 keep = True
@@ -1198,8 +1194,8 @@ class catalog(object):
                     nmags[lbl['_Zmag']][idx] = mags[0][idx] \
                         + 0.95*(mags[0][idx]
                                 - mags[1][idx]) + 0.064
-                    nmags[lbl['_e_Zmag']][idx] = numpy.sqrt(mags[3][idx]**2
-                                                            + 0.035**2)
+                    nmags[lbl['_e_Zmag']][idx] = np.sqrt(mags[3][idx]**2
+                                                         + 0.035**2)
 
                     nmags[lbl['_Ymag']][idx] = mags[0][idx] \
                         + 0.5*(mags[0][idx]
@@ -1234,12 +1230,12 @@ class catalog(object):
 
             if '_transformed' not in self.catalogname:
                 self.catalogname += '_transformed'
-                self.history += ', %d transformed to UKIRT YZJHK (Vega)' %\
-                                self.shape[0]
+                self.history += (', {:d} transformed to UKIRT YZJHK '
+                                 '(Vega)').format(self.shape[0])
                 self.magsystem = 'Vega'
 
-            logging.info('%d sources sucessfully transformed to UKIRT YZJHK' %
-                         self.shape[0])
+            logging.info(('{:d} sources sucessfully transformed to '
+                          'UKIRT YZJHK').format(self.shape[0]))
 
             return self.shape[0]
 
@@ -1247,27 +1243,26 @@ class catalog(object):
         elif ('PANSTARRS' in self.catalogname and
               targetfilter in ['B', 'V', 'R', 'I']):
 
-            logging.info(('trying to transform %d PANSTARRS sources to '
-                          + '%s') % (self.shape[0], targetfilter))
+            logging.info(('trying to transform {:d} PANSTARRS sources to '
+                          + '{:s}').format(self.shape[0], targetfilter))
 
             # transform magnitudes to BVRI, Vega system
             # using Tonry et al. 2012, ApJ 750
-            B = (self.data['gp1mag'] + 0.212 +
-                 0.556*(self.data['gp1mag']-self.data['rp1mag']) +
-                 0.034*(self.data['gp1mag']-self.data['rp1mag'])**2)
-            Berr = numpy.sqrt(self.data['e_gp1mag']**2 + 0.032**2)
-            V = (self.data['gp1mag'] + 0.005 -
-                 0.536*(self.data['gp1mag']-self.data['rp1mag']) +
-                 0.011*(self.data['gp1mag']-self.data['rp1mag'])**2)
-            Verr = numpy.sqrt(self.data['e_gp1mag']**2 + 0.012**2)
-            R = (self.data['rp1mag'] - 0.137 -
-                 0.108*(self.data['gp1mag']-self.data['rp1mag']) -
-                 0.029*(self.data['gp1mag']-self.data['rp1mag'])**2)
-            Rerr = numpy.sqrt(self.data['e_rp1mag']**2 + 0.015**2)
-            I = (self.data['ip1mag'] - 0.366 -
-                 0.136*(self.data['gp1mag']-self.data['rp1mag']) -
-                 0.018*(self.data['gp1mag']-self.data['rp1mag'])**2)
-            Ierr = numpy.sqrt(self.data['e_ip1mag']**2 + 0.017**2)
+            g = self.data['gp1mag'].data
+            e_g = self.data['e_gp1mag'].data
+            r = self.data['rp1mag'].data
+            e_r = self.data['e_rp1mag'].data
+            i = self.data['ip1mag'].data
+            e_i = self.data['e_ip1mag'].data
+
+            B = (g + 0.212 + 0.556*(g-r) + 0.034*(g-r)**2)
+            Berr = np.sqrt(e_g**2 + 0.032**2)
+            V = (g + 0.005 - 0.536*(g-r) + 0.011*(g-r)**2)
+            Verr = np.sqrt(e_g**2 + 0.012**2)
+            R = (r - 0.137 - 0.108*(g-r) - 0.029*(g-r)**2)
+            Rerr = np.sqrt(e_r**2 + 0.015**2)
+            I = (i - 0.366 - 0.136*(g-r) - 0.018*(g-r)**2)
+            Ierr = np.sqrt(e_i**2 + 0.017**2)
 
             self.data.add_column(Column(data=B, name='_Bmag', unit=u.mag))
             self.data.add_column(Column(data=Berr, name='_e_Bmag',
@@ -1284,12 +1279,12 @@ class catalog(object):
 
             if '_transformed' not in self.catalogname:
                 self.catalogname += '_transformed'
-                self.history += ', %d transformed to %s (Vega)' % \
-                                (self.shape[0], targetfilter)
+                self.history += ', {:d} transformed to {:s} (Vega)'.format(
+                    self.shape[0], targetfilter)
                 self.magsystem = 'Vega'
 
-            logging.info('%d sources sucessfully transformed to %s' %
-                         (self.shape[0], targetfilter))
+            logging.info(('{:d} sources sucessfully transformed '
+                          'to {:s}').format(self.shape[0], targetfilter))
 
             return self.shape[0]
 
@@ -1297,137 +1292,72 @@ class catalog(object):
         elif ('PANSTARRS' in self.catalogname and
               targetfilter in ['g', 'r', 'i', 'z']):
 
-            logging.info(('trying to transform %d PANSTARRS sources to '
-                          + '%s') % (self.shape[0], targetfilter))
+            logging.info(('trying to transform {:d} PANSTARRS sources to '
+                          + '{:s}').format(self.shape[0], targetfilter))
 
-            # transform magnitudes to BVRI, Vega system
-            # using Tonry et al. 2012, ApJ 750
             # transform magnitudes to SDSS AB system
             # using Tonry et al. 2012, ApJ 750
-            g_sdss = (self.data['gp1mag'] + 0.013 +
-                      0.145*(self.data['gp1mag']-self.data['rp1mag']) +
-                      0.019*(self.data['gp1mag']-self.data['rp1mag'])**2)
-            gerr_sdss = numpy.sqrt(self.data['e_gp1mag']**2 + 0.008**2)
-            r_sdss = (self.data['rp1mag'] - 0.001 +
-                      0.004*(self.data['gp1mag']-self.data['rp1mag']) +
-                      0.007*(self.data['gp1mag']-self.data['rp1mag'])**2)
-            rerr_sdss = numpy.sqrt(self.data['e_rp1mag']**2 + 0.004**2)
-            i_sdss = (self.data['ip1mag'] - 0.005 +
-                      0.011*(self.data['gp1mag']-self.data['rp1mag']) +
-                      0.010*(self.data['gp1mag']-self.data['rp1mag'])**2)
-            ierr_sdss = numpy.sqrt(self.data['e_ip1mag']**2 + 0.004**2)
-            z_sdss = (self.data['rp1mag'] + 0.013 -
-                      0.039*(self.data['gp1mag']-self.data['rp1mag']) -
-                      0.012*(self.data['gp1mag']-self.data['rp1mag'])**2)
-            zerr_sdss = numpy.sqrt(self.data['e_zp1mag']**2 + 0.01**2)
 
-            self.data.add_column(Column(data=g_sdss, name='_gmag', unit=u.mag))
+            g = self.data['gp1mag'].data
+            e_g = self.data['e_gp1mag'].data
+            r = self.data['rp1mag'].data
+            e_r = self.data['e_rp1mag'].data
+            i = self.data['ip1mag'].data
+            e_i = self.data['e_ip1mag'].data
+            z = self.data['zp1mag'].data
+            e_z = self.data['e_zp1mag'].data
+
+            g_sdss = (g + 0.013 + 0.145*(g-r) + 0.019*(g-r)**2)
+            gerr_sdss = np.sqrt(e_g**2 + 0.008**2)
+            r_sdss = (r - 0.001 + 0.004*(g-r) + 0.007*(g-r)**2)
+            rerr_sdss = np.sqrt(e_r**2 + 0.004**2)
+            i_sdss = (i - 0.005 + 0.011*(g-r) + 0.010*(g-r)**2)
+            ierr_sdss = np.sqrt(e_i**2 + 0.004**2)
+            z_sdss = (z + 0.013 - 0.039*(g-r) - 0.012*(g-r)**2)
+            zerr_sdss = np.sqrt(e_z**2 + 0.01**2)
+
+            self.data.add_column(Column(data=g_sdss, name='_gmag',
+                                        unit=u.mag))
             self.data.add_column(Column(data=gerr_sdss, name='_e_gmag',
                                         unit=u.mag))
-            self.data.add_column(Column(data=r_sdss, name='_rmag', unit=u.mag))
+            self.data.add_column(Column(data=r_sdss, name='_rmag',
+                                        unit=u.mag))
             self.data.add_column(Column(data=rerr_sdss, name='_e_rmag',
                                         unit=u.mag))
-            self.data.add_column(Column(data=i_sdss, name='_imag', unit=u.mag))
+            self.data.add_column(Column(data=i_sdss, name='_imag',
+                                        unit=u.mag))
             self.data.add_column(Column(data=ierr_sdss, name='_e_imag',
                                         unit=u.mag))
-            self.data.add_column(Column(data=z_sdss, name='_zmag', unit=u.mag))
+            self.data.add_column(Column(data=z_sdss, name='_zmag',
+                                        unit=u.mag))
             self.data.add_column(Column(data=zerr_sdss, name='_e_zmag',
                                         unit=u.mag))
 
             if '_transformed' not in self.catalogname:
                 self.catalogname += '_transformed'
-                self.history += ', %d transformed to %s (AB)' % \
-                                (self.shape[0], targetfilter)
+                self.history += ', {:d} transformed to {:s} (AB)'.format(
+                    self.shape[0], targetfilter)
                 self.magsystem = 'AB'
 
-            logging.info('%d sources sucessfully transformed to %s' %
-                         (self.shape[0], targetfilter))
+            logging.info(('{:d} sources sucessfully transformed '
+                          'to {:s}').format(self.shape[0], targetfilter))
 
             return self.shape[0]
-
-        # ### 2MASS to Warner BVRI (not accounting for galactic extinction)
-        # elif (self.catalogname == '2MASS') and \
-        #    (targetfilter in {'B', 'V', 'R', 'I'}) and \
-        #    (self.magsystem == 'Vega'):
-
-        #     logging.info(('trying to transform %d 2MASS sources to ' \
-        #                   + 'Warner %s') % (self.shape[0], targetfilter))
-
-        #     # transformations using the recipe by Warner 2007, MPBu
-        #     mags  = [self['Jmag'], self['Kmag'], self['e_Jmag']]
-        #     lbl   = {'_Bmag':0 , '_e_Bmag': 1, '_Vmag': 2, '_e_Vmag': 3,
-        #              '_Rmag': 4, '_e_Rmag': 5, '_Imag': 6, '_e_Imag': 7}
-        #     nmags = [numpy.zeros(self.shape[0]) for i in range(len(lbl))]
-
-        #     for idx in range(self.shape[0]):
-        #         keep = True
-        #         # remove objects with extreme J-Ks color index
-        #         cidx = mags[0][idx]-mags[1][idx]
-        #         if cidx < -0.1 or cidx > 1.0:
-        #             keep = False
-        #         # reject faint stars based on Figure 6 by Hodgkin et
-        #         # al. 2009, MNRAS
-        #         if mags[0][idx] > 18 or mags[1][idx] > 17:
-        #             keep = False
-
-        #         if keep:
-        #             nmags[lbl['_Bmag']][idx]   = mags[0][idx] + 1.7495*cidx**3 \
-        #                                         - 2.7785*cidx**2 \
-        #                                         + 5.215*cidx + 0.1980
-        #             nmags[lbl['_e_Bmag']][idx] = numpy.sqrt(0.08*0.08 +
-        #                                                    mags[2][idx]**2)
-
-        #             nmags[lbl['_Vmag']][idx]   = mags[0][idx] + 1.4688*cidx**3 \
-        #                                         - 2.3250*cidx**2 \
-        #                                         + 3.5143*cidx + 0.1496
-        #             nmags[lbl['_e_Vmag']][idx] = numpy.sqrt(0.05*0.05 +
-        #                                                    mags[2][idx]**2)
-
-        #             nmags[lbl['_Rmag']][idx]   = mags[0][idx] + 1.1230*cidx**3 \
-        #                                         - 1.7849*cidx**2 \
-        #                                         + 2.5105*cidx + 0.1045
-        #             nmags[lbl['_e_Rmag']][idx] = numpy.sqrt(0.08*0.08 +
-        #                                                    mags[2][idx]**2)
-
-        #             nmags[lbl['_Imag']][idx]   = mags[0][idx] + 0.2963*cidx**3 \
-        #                                         - 0.4866*cidx**2 \
-        #                                         + 1.2816*cidx + 0.0724
-        #             nmags[lbl['_e_Imag']][idx] = numpy.sqrt(0.03*0.03 +
-        #                                                    mags[2][idx]**2)
-        #         else:
-        #             for mag in lbl.keys():
-        #                 nmags[lbl[mag]][idx] = 99
-
-            # # append nmags arrays to catalog
-            # for key, idx in lbl.items():
-            #     self.add_field(key, nmags[idx])
-
-            # # get rid of sources that have not been transformed
-            # self.data = self.data[self['_Vmag'] < 99]
-
-            # self.catalogname  += '_transformed'
-            # self.history += ', %d transformed to Warner %s (Vega)' % \
-            #                 (self.shape[0], targetfilter)
-            # self.magsystem = 'Vega'
-
-            # logging.info('%d sources sucessfully transformed to Warner %s' % \
-            #              (self.shape[0], targetfilter))
-
-            # return self.shape[0]
 
         # SDSS to UKIRT Z
         elif (self.catalogname.find('SDSS') > -1) and \
                 targetfilter == 'Z_UKIRT' and \
                 self.catalogname == 'AB':
 
-            logging.info(('trying to transform %d SDSS sources to '
-                          + 'UKIRT Z') % self.shape[0])
+            logging.info(('trying to transform {:d} SDSS sources to '
+                          + 'UKIRT Z').format(self.shape[0]))
 
             # transformations using the recipe by Hodgkin et al. 2009, MNRAS
             # select sources for input catalog
-            mags = [self['zmag'], self['imag'], self['e_zmag']]
+            mags = [self['zmag'].data, self['imag'].data,
+                    self['e_zmag'].data]
             lbl = {'_Zmag': 0, '_e_Zmag': 1}
-            nmags = [numpy.zeros(self.shape[0]) for i in range(len(lbl))]
+            nmags = [np.zeros(self.shape[0]) for i in range(len(lbl))]
 
             for idx in range(self.shape[0]):
                 # transformations according to Hewett et al. 2006, MNRAS
@@ -1444,19 +1374,132 @@ class catalog(object):
             self.data = self.data[self['_Zmag'] < 99]
 
             self.catalogname += '_transformed'
-            self.history += ', %d transformed to UKIRT Z (Vega)' % \
-                            self.shape[0]
+            self.history += ', {:d} transformed to UKIRT Z (Vega)'.format(
+                self.shape[0])
             self.magsystem = 'AB (ugriz), Z_UKIRT (Vega)'
 
-            logging.info('%d sources sucessfully transformed to UKIRT Z' %
-                         self.shape[0])
+            logging.info(('{:d} sources sucessfully transformed to '
+                          'UKIRT Z').format(self.shape[0]))
+
+            return self.shape[0]
+
+        # Gaia DR2+ to Johnson Cousins VRI
+        elif ('GAIA' in self.catalogname and
+              targetfilter in ['V', 'R', 'I']):
+
+            logging.info(('trying to transform {:d} GAIA sources to '
+                          + '{:s}').format(self.shape[0], targetfilter))
+
+            # transform magnitudes to Johnson-Cousins, Vega system
+            # using http://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html
+
+            colormask = ((self.data['BPmag']-self.data['RPmag'] > -0.5) &
+                         (self.data['BPmag']-self.data['RPmag'] < 2.75))
+            self.data = self.data[colormask]
+
+            g = self.data['Gmag'].data
+            e_g = self.data['e_Gmag'].data
+            bp = self.data['BPmag'].data
+            rp = self.data['RPmag'].data
+
+            V = g - (-0.0176 - 0.00686*(bp-rp) - 0.1732*(bp-rp)**2)
+            e_V = np.sqrt(e_g**2 + 0.045858**2)
+            R = g - (-0.003226 + 0.3833*(bp-rp) - 0.1345*(bp-rp)**2)
+            e_R = np.sqrt(e_g**2 + 0.04840**2)
+            I = g - (0.02085 + 0.7419*(bp-rp) - 0.09531*(bp-rp)**2)
+            e_I = np.sqrt(e_g**2 + 0.04956**2)
+
+            self.data.add_column(Column(data=V, name='_Vmag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=e_V, name='_e_Vmag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=R, name='_Rmag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=e_R, name='_e_Rmag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=I, name='_Imag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=e_I, name='_e_Imag',
+                                        unit=u.mag))
+
+            if '_transformed' not in self.catalogname:
+                self.catalogname += '_transformed'
+                self.history += ', {:d} transformed to {:s} (Vega)'.format(
+                    self.shape[0], targetfilter)
+                self.magsystem = 'Vega'
+
+            logging.info(
+                '{:d} sources sucessfully transformed to {:s}'.format(
+                    self.shape[0], targetfilter))
+
+            return self.shape[0]
+
+        # Gaia DR2+ to SDSS
+        elif ('GAIA' in self.catalogname and
+              targetfilter in ['g', 'r', 'i']):
+
+            logging.info(('trying to transform {:d} GAIA sources to '
+                          + '{:s}').format(self.shape[0], targetfilter))
+
+            # transform magnitudes to Johnson-Cousins, Vega system
+            # using http://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html
+
+            if targetfilter == 'g':
+                colormask = ((self.data['BPmag']-self.data['RPmag'] > -0.5) &
+                             (self.data['BPmag']-self.data['RPmag'] < 2.0))
+            elif targetfilter == 'r':
+                colormask = ((self.data['BPmag']-self.data['RPmag'] > 0.2) &
+                             (self.data['BPmag']-self.data['RPmag'] < 2.7))
+            elif targetfilter == 'i':
+                colormask = ((self.data['BPmag']-self.data['RPmag'] > 0) &
+                             (self.data['BPmag']-self.data['RPmag'] < 4.5))
+
+            self.data = self.data[colormask]
+
+            g = self.data['Gmag'].data
+            e_g = self.data['e_Gmag'].data
+            bp = self.data['BPmag'].data
+            rp = self.data['RPmag'].data
+
+            g_sdss = g - (0.13518 - 0.46245*(bp-rp) -
+                          0.25171*(bp-rp)**2 + 0.021349*(bp-rp)**3)
+            e_g_sdss = np.sqrt(e_g**2 + 0.16497**2)
+            r_sdss = g - (-0.12879 + 0.24662*(bp-rp) -
+                          0.027464*(bp-rp)**2 - 0.049465*(bp-rp)**3)
+            e_r_sdss = np.sqrt(e_g**2 + 0.066739**2)
+            i_sdss = g - (-0.29676 + 0.64728*(bp-rp) - 0.10141*(bp-rp)**2)
+            e_i_sdss = np.sqrt(e_g**2 + 0.098957**2)
+
+            self.data.add_column(Column(data=g_sdss, name='_gmag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=e_g_sdss, name='_e_gmag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=r_sdss, name='_rmag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=e_r_sdss, name='_e_rmag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=i_sdss, name='_imag',
+                                        unit=u.mag))
+            self.data.add_column(Column(data=e_i_sdss, name='_e_imag',
+                                        unit=u.mag))
+
+            if '_transformed' not in self.catalogname:
+                self.catalogname += '_transformed'
+                self.history += ', {:d} transformed to {:s} (AB)'.format(
+                    self.shape[0], targetfilter)
+                self.magsystem = 'AB'
+
+            logging.info(
+                '{:d} sources sucessfully transformed to {:s}'.format(
+                    self.shape[0], targetfilter))
 
             return self.shape[0]
 
         else:
             if self.display:
-                print('ERROR: no transformation from %s to %s available' %
-                      (self.catalogname, targetfilter))
+                print(('ERROR: no transformation from {:s} to '
+                       '{:s} available').format(self.catalogname,
+                                                targetfilter))
             return 0
 
     # catalog operations
@@ -1466,8 +1509,8 @@ class catalog(object):
                    match_keys_other_catalog=['ra.deg', 'dec.deg'],
                    extract_this_catalog=['ra.deg', 'dec.deg'],
                    extract_other_catalog=['ra.deg', 'dec.deg'],
-                   tolerance=old_div(0.5, 3600.)):
-        """ match sources from different catalogs based on two fields 
+                   tolerance=0.5/3600):
+        """ match sources from different catalogs based on two fields
             (e.g., postions)
             return: requested fields for matched sources
             note: will only match exclusive pairs
@@ -1502,10 +1545,10 @@ class catalog(object):
             indices_this_catalog, indices_other_catalog = [], []
 
             for target_idx in range(self.shape[0]):
-                other_cat_indices = numpy.where(match[1] == target_idx)[0]
+                other_cat_indices = np.where(match[1] == target_idx)[0]
                 if len(other_cat_indices) > 0:
                     # find closest match
-                    min_idx = other_cat_indices[numpy.argmin(
+                    min_idx = other_cat_indices[np.argmin(
                         [match[0][i] for i in other_cat_indices])]
 
                     indices_this_catalog.append(target_idx)
@@ -1517,8 +1560,8 @@ class catalog(object):
         indices = list(zip(indices_this_catalog, indices_other_catalog))
         # check if element is either not nan or not a float
 
-        def check_not_nan(x): return not numpy.isnan(x) if \
-            (type(x) is numpy.float_) else True
+        def check_not_nan(x): return not np.isnan(x) if \
+            (type(x) is np.float_) else True
 
         indices = [i for i in indices if all([check_not_nan(self[i[0]][key])
                                               for key in extract_this_catalog]
@@ -1530,77 +1573,3 @@ class catalog(object):
                                 for key in extract_other_catalog]
 
         return [output_this_catalog, output_other_catalog]
-
-
-# Test Routines
-
-# LDAC routines
-
-# test = catalog('ldac test')
-# read = test.read_fits('testdata/test.ldac', maxflag=0)
-# print '%d sources and %d columns read from ldac file' % \
-#     (read[0], read[1])
-
-# print test.write_ascii('testdata/test.ldac.dat'), \
-#     'sources sucessfully written to ascii file'
-
-# print test.write_fits('testdata/test_written.ldac'), \
-#     'sources successfully written to fits file'
-
-# print test.write_database('testdata/test.ldac.db')
-
-
-# catalog download and manipulation
-
-# cat1 = catalog('APASS9')
-# print(cat1.download_catalog(80, 0, 0.5, 10000), 'sources grabbed from', cat1.catalogname)
-# print(cat1.fields)
-# print(cat1[0])
-
-# cat2 = catalog('2MASS')
-# print cat2.download_catalog(80, 0, 0.5, 10000), 'sources grabbed from', cat2.catalogname
-# print cat2[305]
-# print cat2.fields
-
-# cat3 = catalog('SDSS-R9')
-# print(cat3.download_catalog(329.50922672, -2.33703204, 0.001, 10000), 'sources grabbed from', cat3.catalogname)
-# print(cat3.data['imag'])
-
-
-# cat4 = catalog('USNO-B1')
-# print cat4.download_catalog(80, 0, 0.5, 10000), 'sources grabbed from', cat4.catalogname
-# print cat4[305]
-# print cat4.fields
-
-
-# print cat2.shape, cat2.history
-# print cat2.transform_filters('V'), 'sources transformed to V'      #2MASS to BVRI
-# print cat2.shape, cat2.history
-
-# print cat2.shape, cat2.history
-# print cat2.transform_filters('K_UKIRT'), 'sources transformed to K'      #2MASS to UKIRT
-# print cat2.shape, cat2.history
-
-# print cat3.shape, cat3.history
-# print cat3.transform_filters('Z_UKIRT'), 'sources transformed to Z'      #SDSS to UKIRT
-# print cat3.shape, cat3.history
-
-# print cat1.shape, cat1.history
-# print cat1.transform_filters('I'), 'sources transformed to I'      #SDSS to BVRI
-# print cat1.shape, cat1.history
-# for i in cat1:
-#    print i['_Imag'], i['rmag'], i['imag']
-
-
-# print test.write_database('test.db'), 'sources written to database file'
-
-# cat4 = catalog('')
-# print cat4.read_database('test.db'), 'sources read from database file'
-
-
-# ### test preliminary Gaia implementation
-# cat = catalog('SDSS-R9')
-# cat.download_gaiadr1(294.99525, 0.065194, 0.5, 10, max_mag=15, write_ldac=True)
-# #cat.download_gaiadr1(239.708791667, 6.10333333333, 0.211666666667, 100, max_mag=20, write_ldac=True)
-
-# print len(cat.data.columns)

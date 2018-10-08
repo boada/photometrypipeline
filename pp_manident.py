@@ -2,7 +2,7 @@
 
 """ MANIDENT - manual target identification tool for the Photometry Pipeline
 
-    v1.0: 2016-08-08, michael.mommert@nau.edu
+    v1.0: 2016-08-08, mommermiscience@gmail.com
 
     this code is based in part on viewseries.py:
     http://spider.wadsworth.org/spider_doc/spider/docs/python/spipylib/examples/viewseries.py

@@ -2,13 +2,13 @@
 
 """ PP_DISTILL - distill calibrated image databases into one database
                  of select moving or fixed sources
-    v1.0: 2016-01-24, michael.mommert@nau.edu
+    v1.0: 2016-01-24, mommermiscience@gmail.com
 """
 from __future__ import print_function
 from __future__ import division
 
 # Photometry Pipeline
-# Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
+# Copyright (C) 2016-2018  Michael Mommert, mommermiscience@gmail.com
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -199,7 +199,8 @@ def moving_primary_target(catalogs, man_targetname, offset, is_asteroid=None,
         if man_targetname is not None:
             targetname = man_targetname.replace('_', ' ')
         for smallbody in [True, False]:
-            eph = callhorizons.query(targetname, smallbody=smallbody)
+            eph = callhorizons.query(targetname.replace('_', ' '),
+                                     smallbody=smallbody)
             #eph = callhorizons.query(targetname, smallbody=False)
             eph.set_discreteepochs(cat.obstime[0])
             n = 0
@@ -231,7 +232,8 @@ def moving_primary_target(catalogs, man_targetname, offset, is_asteroid=None,
         if man_targetname is not None:
             targetname = man_targetname.replace('_', ' ')
             cat.obj = targetname
-        eph = callhorizons.query(targetname, smallbody=is_asteroid)
+        eph = callhorizons.query(targetname.replace('_', ' '),
+                                 smallbody=is_asteroid)
         #eph = callhorizons.query(targetname, smallbody=False)
         eph.set_discreteepochs(cat.obstime[0])
 

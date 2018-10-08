@@ -4,6 +4,7 @@
 dump/
 #*#
 *e4p
+frost*
 
 # stuff we don't want to track
 setup/mytelescopes.py

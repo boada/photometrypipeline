@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 """ PP_PREPARE - prepare fits images for photometry pipeline
-    v1.0: 2016-02-27, michael.mommert@nau.edu
+    v1.0: 2016-02-27, mommermiscience@gmail.com
 """
 from __future__ import print_function
 from __future__ import division
 
 # Photometry Pipeline
-# Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
+# Copyright (C) 2016-2018  Michael Mommert, mommermiscience@gmail.com
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -307,8 +307,8 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         except KeyError:
             logging.warning('cannot translate filter keyword \"' +
                             header[obsparam['filter']] +
-                            '\"; assume clear filter')
-            header[obsparam['filter']] = 'clear'
+                            '\"')
+            #header[obsparam['filter']] = 'clear'
         header['FILTER'] = (header[obsparam['filter']], 'PP:copied')
 
         # perform header update

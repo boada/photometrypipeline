@@ -1,7 +1,7 @@
 """
 configuration file for photometry pipeline
 
-2016-01-27, michael.mommert@nau.edu
+2016-01-27, mommermiscience@gmail.com
 """
 from __future__ import print_function
 

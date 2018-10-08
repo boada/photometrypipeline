@@ -71,7 +71,7 @@ The Photometry Pipeline is distributed under the GNU GPLv3 license.
 
 Copyright (C) 2016  Michael Mommert 
 
-Feel free to contact me in case of questions or suggestions: michael . mommert (at) nau . edu
+Feel free to contact me in case of questions or suggestions: mommermiscience (at) gmail . com
 
 
 .. _github: http://github.com/mommermi/photometrypipeline

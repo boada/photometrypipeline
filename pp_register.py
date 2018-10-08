@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 """ PP_REGISTER - wcs register frames
-    v1.0: 2015-12-30, michael.mommert@nau.edu
+    v1.0: 2015-12-30, mommermiscience@gmail.com
 """
 from __future__ import print_function
 
 # Photometry Pipeline
-# Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
+# Copyright (C) 2016-2018 Michael Mommert, mommermiscience@gmail.com
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

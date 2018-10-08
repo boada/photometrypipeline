@@ -1,11 +1,11 @@
 """ DIAGNOSTICS - diagnostic routines for photometry pipeline
-    v1.0: 2016-02-25, michael.mommert@nau.edu
+    v1.0: 2016-02-25, mommermiscience@gmail.com
 """
 from __future__ import print_function
 from __future__ import division
 
 # Photometry Pipeline
-# Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
+# Copyright (C) 2016-2018  Michael Mommert, mommermiscience@gmail.com
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -45,8 +45,8 @@ except ImportError:
     sys.exit()
 
 try:
-    from scipy.misc import toimage  # requires Pillow
-    from scipy.misc import imresize  # requires Pillow
+    from scipy.misc import toimage
+    from scipy.misc import imresize
     from scipy.misc import bytescale
 except ImportError:
     print('Modules scipy or pillow not found. Please install with: pip '

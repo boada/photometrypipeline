@@ -1,10 +1,10 @@
 """
 Personal Photometry Pipeline Configuation File
-2016-11-01, michael.mommert@nau.edu
+2016-11-01, mommermiscience@gmail.com
 """
 
 # Photometry Pipeline
-# Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
+# Copyright (C) 2016-2018  Michael Mommert, mommermiscience@gmail.com
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ Personal Photometry Pipeline Configuation File
 # along with this program.  If not, see
 # <http://www.gnu.org/licenses/>.
 
-##### telescope/instrument configurations
+# telescope/instrument configurations
 
 # MYTELESCOPE setup parameters
 mytelescope_param = {
@@ -66,8 +66,8 @@ mytelescope_param = {
 
     # scamp settings
     'scamp-config-file': rootpath + '/setup/mytelescope.scamp',
-    'reg_max_mag'          : 19,  
-    'reg_search_radius'    : 0.5, # deg   
+    'reg_max_mag': 19,
+    'reg_search_radius': 0.5,  # deg
     'source_tolerance': 'high',
 
     # default catalog settings
@@ -75,14 +75,14 @@ mytelescope_param = {
     'photometry_catalogs': ['SDSS-R9', 'APASS9', '2MASS']
 }
 
-##### add telescope configurations to 'official' telescopes.py
+# add telescope configurations to 'official' telescopes.py
 
 implemented_telescopes.append('MYTELESCOPE')
 
-### translate INSTRUME (or others, see _pp_conf.py) header keyword into
+# translate INSTRUME (or others, see _pp_conf.py) header keyword into
 #   PP telescope keyword
 # example: INSTRUME keyword in header is 'mytel'
 instrument_identifiers['instrume_identifier'] = 'MYTELESCOPE'
 
-### translate telescope keyword into parameter set defined here
+# translate telescope keyword into parameter set defined here
 telescope_parameters['MYTELESCOPE'] = mytelescope_param

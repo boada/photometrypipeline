@@ -2,12 +2,12 @@
 
 """ PP_EXTRACT - identify field sources using Source Extractor with
     multi-threading capabilities
-    v1.0: 2015-12-30, michael.mommert@nau.edu
+    v1.0: 2015-12-30, mommermiscience@gmail.com
 """
 from __future__ import print_function
 
 # Photometry Pipeline
-# Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
+# Copyright (C) 2016-2018  Michael Mommert, mommermiscience@gmail.com
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,17 +25,20 @@ from __future__ import print_function
 
 
 import numpy
-import os, sys
+import os
+import sys
 import subprocess
 import logging
-import argparse, shlex
-import time, datetime
+import argparse
+import shlex
+import time
+import datetime
 from multiprocessing import Pool
 import logging
 from astropy.io import fits
 
 # only import if Python3 is used
-if sys.version_info > (3,0):
+if sys.version_info > (3, 0):
     from builtins import str
     from future import standard_library
     standard_library.install_aliases()
@@ -43,11 +46,11 @@ if sys.version_info > (3,0):
 
 # create a portable DEVNULL
 # necessary to prevent subprocess.PIPE and STDOUT from clogging if
-# Source Extractor runs for too long 
+# Source Extractor runs for too long
 try:
-    from subprocess import DEVNULL # Py3
+    from subprocess import DEVNULL  # Py3
 except ImportError:
-    import os # Py2
+    import os  # Py2
     DEVNULL = open(os.devnull, 'wb')
 
 
@@ -57,19 +60,20 @@ from catalog import *
 from toolbox import *
 
 # setup logging
-logging.basicConfig(filename = _pp_conf.log_filename,
-                    level    = _pp_conf.log_level,
-                    format   = _pp_conf.log_formatline,
-                    datefmt  = _pp_conf.log_datefmt)
+logging.basicConfig(filename=_pp_conf.log_filename,
+                    level=_pp_conf.log_level,
+                    format=_pp_conf.log_formatline,
+                    datefmt=_pp_conf.log_datefmt)
 
-########## some definitions
+# some definitions
 
 version = '1.0'
 
 # Determine the Source Extractor executable name: sex or sextractor.
 for cmd in ['sex', 'sextractor']:
     try:
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
         del p
         break
     except OSError:
@@ -79,7 +83,8 @@ else:
 sextractor_cmd = cmd
 del cmd
 
-##### extractor class definition
+# extractor class definition
+
 
 def extract_singleframe(data):
     """
@@ -90,22 +95,22 @@ def extract_singleframe(data):
     filename = data[1]
 
     out = {}
-    
-    ### process this frame
+
+    # process this frame
     ldacname = filename[:filename.find('.fit')]+'.ldac'
     out['fits_filename'] = filename
     out['ldac_filename'] = ldacname
-    out['parameters']    = param
+    out['parameters'] = param
 
     # prepare running SEXTRACTOR
     os.remove(ldacname) if os.path.exists(ldacname) else None
 
     optionstring = ''
     if _pp_conf.photmode == 'APER':
-        optionstring  += ' -PHOT_APERTURES %s ' % \
-                        param['aperture_diam']
-    if ('global_background' in param and 
-        param['global_background']):
+        optionstring += ' -PHOT_APERTURES %s ' % \
+            param['aperture_diam']
+    if ('global_background' in param and
+            param['global_background']):
         optionstring += ' -BACKPHOTO_TYPE GLOBAL '
     else:
         optionstring += ' -BACKPHOTO_TYPE LOCAL '
@@ -132,14 +137,14 @@ def extract_singleframe(data):
                    optionstring, filename)
     logging.info('call Source Extractor as: %s' % commandline)
 
-    ### run SEXTRACTOR and wait for it to finish
+    # run SEXTRACTOR and wait for it to finish
     try:
         sex = subprocess.Popen(shlex.split(commandline),
                                stdout=DEVNULL,
                                stderr=DEVNULL,
                                close_fds=True)
         # do not direct stdout to subprocess.PIPE:
-        # for large FITS files, PIPE will clog, stalling 
+        # for large FITS files, PIPE will clog, stalling
         # subprocess.Popen
     except Exception as e:
         print('Source Extractor call:', (e))
@@ -165,7 +170,7 @@ def extract_singleframe(data):
 
     out['catalog_data'] = ldac_data
 
-    ### update image header with aperture radius and other information
+    # update image header with aperture radius and other information
     hdu = fits.open(filename, mode='update', ignore_missing_end=True)
     obsparam = param['obsparam']
     # observation midtime
@@ -173,37 +178,37 @@ def extract_singleframe(data):
         midtimjd = hdu[0].header[obsparam['obsmidtime_jd']]
     else:
         if obsparam['date_keyword'].find('|') == -1:
-            midtimjd = dateobs_to_jd(\
-                                hdu[0].header[obsparam['date_keyword']]) + \
-                        float(hdu[0].header[obsparam['exptime']])/2./86400.
+            midtimjd = dateobs_to_jd(
+                hdu[0].header[obsparam['date_keyword']]) + \
+                float(hdu[0].header[obsparam['exptime']])/2./86400.
         else:
-            datetime = hdu[0].header[\
-                                     obsparam['date_keyword'].split('|')[0]]+ \
-                                     'T'+hdu[0].header[\
-                                    obsparam['date_keyword'].split('|')[1]]
+            datetime = hdu[0].header[
+                obsparam['date_keyword'].split('|')[0]] + \
+                'T'+hdu[0].header[
+                obsparam['date_keyword'].split('|')[1]]
             midtimjd = dateobs_to_jd(datetime) + \
-                       float(hdu[0].header[\
-                                           obsparam['exptime']])/2./86400.
+                float(hdu[0].header[
+                    obsparam['exptime']])/2./86400.
     out['time'] = midtimjd
 
     # hdu[0].header['APRAD'] = \
-        #     (",".join([str(aprad) for aprad in self.param['aprad']]), \
-        #      'aperture phot radius (px)')
+    #     (",".join([str(aprad) for aprad in self.param['aprad']]), \
+    #      'aperture phot radius (px)')
     # hdu[0].header['SEXSNR'] = \
-        #     (self.param['sex_snr'],
+    #     (self.param['sex_snr'],
     #      'Sextractor detection SNR threshold')
     # hdu[0].header['SEXAREA'] = \
-        #     (self.param['source_minarea'],
+    #     (self.param['source_minarea'],
     #      'Sextractor source area threshold (px)')
     out['fits_header'] = hdu[0].header
 
     hdu.flush()
     hdu.close()
 
-    logging.info("%d sources extracted from frame %s" % \
+    logging.info("%d sources extracted from frame %s" %
                  (len(ldac_data.data), filename))
     if not param['quiet']:
-        print("%d sources extracted from frame %s" % \
+        print("%d sources extracted from frame %s" %
               (len(ldac_data.data), filename))
 
     return out
@@ -217,7 +222,7 @@ def extract_multiframe(filenames, parameters):
     output: result properties
     """
 
-    logging.info('extract sources from %d files using Source Extractor' % \
+    logging.info('extract sources from %d files using Source Extractor' %
                  len(filenames))
     logging.info('extraction parameters: %s' % repr(parameters))
 
@@ -230,12 +235,12 @@ def extract_multiframe(filenames, parameters):
         except KeyError:
             logging.critical('ERROR: TEL_KEYW not in image header (%s)' %
                              filenames[0])
-            print('ERROR: TEL_KEYW not in image header;' + \
+            print('ERROR: TEL_KEYW not in image header;' +
                   'has this image run through register?')
             return {}
     try:
-        parameters['obsparam'] = _pp_conf.telescope_parameters[\
-                                                parameters['telescope']]
+        parameters['obsparam'] = _pp_conf.telescope_parameters[
+            parameters['telescope']]
     except KeyError:
         print("ERROR: telescope '%s' is unknown." % telescope)
         logging.critical('ERROR: telescope \'%s\' is unknown.' % telescope)
@@ -254,10 +259,10 @@ def extract_multiframe(filenames, parameters):
                not isinstance(parameters['aprad'], numpy.ndarray):
                 parameters['aprad'] = [str(parameters['aprad'])]
             parameters['aperture_diam'] = ','.join([str(float(rad)*2.)
-                                                for rad in
-                                                parameters['aprad']])
-                
-    #check what the binning is and if there is a mask available
+                                                    for rad in
+                                                    parameters['aprad']])
+
+    # check what the binning is and if there is a mask available
     binning = get_binning(hdu[0].header, parameters['obsparam'])
     bin_string = '%d,%d' % (binning[0], binning[1])
 
@@ -267,18 +272,18 @@ def extract_multiframe(filenames, parameters):
 
     hdu.close()
 
-    ### thread and queue handling
+    # thread and queue handling
 
     pool = Pool()
     data = [(parameters, filename) for filename in filenames]
     output = pool.map(extract_singleframe, data)
-    
+
     # check if extraction was successful
     if any(['catalog_data' not in list(output[i].keys())
             for i in range(len(output))]):
         return None
 
-    ### output content
+    # output content
     #
     # { 'fits_filename': fits filename,
     #   'ldac_filename': LDAC filename,
@@ -292,12 +297,12 @@ def extract_multiframe(filenames, parameters):
     return output
 
 
-############ MAIN
+# MAIN
 
 if __name__ == '__main__':
 
     # define command line arguments
-    parser = argparse.ArgumentParser(description='source detection and' + \
+    parser = argparse.ArgumentParser(description='source detection and' +
                                      'photometry using Source Extractor')
     parser.add_argument("-snr", help='sextractor SNR threshold', default=1.5)
     parser.add_argument("-minarea", help='sextractor source area threshold',
@@ -327,13 +332,12 @@ if __name__ == '__main__':
     filenames = args.images
 
     # prepare parameter dictionary
-    parameters = {'sex_snr':sex_snr, 'source_minarea':source_minarea, \
-                  'aprad':aprad, 'telescope':telescope,
-                  'ignore_saturation':ignore_saturation, 'quiet':quiet}
+    parameters = {'sex_snr': sex_snr, 'source_minarea': source_minarea,
+                  'aprad': aprad, 'telescope': telescope,
+                  'ignore_saturation': ignore_saturation, 'quiet': quiet}
 
     if paramfile is not None:
         parameters['paramfile'] = paramfile
 
-    ### call extraction wrapper
+    # call extraction wrapper
     extraction = extract_multiframe(filenames, parameters)
-

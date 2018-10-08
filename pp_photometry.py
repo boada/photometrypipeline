@@ -3,13 +3,13 @@
 """ PP_PHOTOMETRY - run curve-of-growth analysis on image files,
                     identify optimum aperture radius, and redo photometry
 
-    v1.0: 2015-12-30, michael.mommert@nau.edu
+    v1.0: 2015-12-30, mommermiscience@gmail.com
 """
 from __future__ import print_function
 from __future__ import division
 
 # Photometry Pipeline
-# Copyright (C) 2016  Michael Mommert, michael.mommert@nau.edu
+# Copyright (C) 2016-2018  Michael Mommert, mommermiscience@gmail.com
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -133,7 +133,7 @@ def curve_of_growth_analysis(filenames, parameters,
                 date = hdu[0].header['MIDTIMJD']
 
             # call HORIZONS to get target coordinates
-            eph = callhorizons.query(targetname)
+            eph = callhorizons.query(targetname.replace('_', ' '))
             eph.set_discreteepochs(date)
             try:
                 n = eph.get_ephemerides(str(obsparam['observatory_code']))
