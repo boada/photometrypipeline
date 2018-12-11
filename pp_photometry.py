@@ -5,9 +5,6 @@
 
     v1.0: 2015-12-30, mommermiscience@gmail.com
 """
-from __future__ import print_function
-from __future__ import division
-
 # Photometry Pipeline
 # Copyright (C) 2016-2018  Michael Mommert, mommermiscience@gmail.com
 
@@ -26,20 +23,15 @@ from __future__ import division
 # <http://www.gnu.org/licenses/>.
 
 
-from past.utils import old_div
 import numpy
 import os
 import sys
-import subprocess
 import logging
 import argparse
-import time
-from copy import deepcopy
 from astropy.io import fits
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pylab as plt
-import callhorizons
+from astroquery.jplhorizons import Horizons
 
 # only import if Python3 is used
 if sys.version_info > (3, 0):
@@ -51,7 +43,7 @@ import _pp_conf
 import pp_extract
 from catalog import *
 from toolbox import *
-import diagnostics as diag
+from diagnostics import photometry as diag
 
 # setup logging
 logging.basicConfig(filename=_pp_conf.log_filename,
@@ -133,19 +125,21 @@ def curve_of_growth_analysis(filenames, parameters,
                 date = hdu[0].header['MIDTIMJD']
 
             # call HORIZONS to get target coordinates
-            eph = callhorizons.query(targetname.replace('_', ' '))
-            eph.set_discreteepochs(date)
+            obj = Horizons(targetname.replace('_', ' '),
+                           epochs=date,
+                           location=str(obsparam['observatory_code']))
             try:
-                n = eph.get_ephemerides(str(obsparam['observatory_code']))
+                eph = obj.ephemerides()
+                n = len(eph)
             except ValueError:
-                print('Target (%s) not an asteroid' % targetname)
-                logging.warning('Target (%s) not an asteroid' % targetname)
+                print('Target (%s) not a small body' % targetname)
+                logging.warning('Target (%s) not a small body' % targetname)
                 n = None
 
             if n is None or n == 0:
                 logging.warning('WARNING: No position from Horizons!' +
                                 'Name (%s) correct?' % targetname)
-                logging.warning('HORIZONS call: %s' % eph.url)
+                logging.warning('HORIZONS call: %s' % obj.uri)
                 logging.info('proceeding with background sources analysis')
                 parameters['background_only'] = True
             else:
@@ -158,28 +152,31 @@ def curve_of_growth_analysis(filenames, parameters,
         data = catalog('Sextractor_LDAC')
         data.read_ldac(ldac_filename, maxflag=3)
 
+        if data.shape[0] == 0:
+            continue
+
         # identify target and extract its curve-of-growth
         n_target_identified = 0
         if not parameters['background_only']:
-            residuals = numpy.sqrt((data['ra.deg']-target_ra)**2 +
-                                   (data['dec.deg']-target_dec)**2)
+            residuals = numpy.sqrt((data['ra_deg']-target_ra)**2 +
+                                   (data['dec_deg']-target_dec)**2)
+
             target_idx = numpy.argmin(residuals)
-            if residuals[target_idx] > old_div(_pp_conf.pos_epsilon, 3600.):
+            if residuals[target_idx] > _pp_conf.pos_epsilon/3600:
                 logging.warning(('WARNING: frame %s, large residual to ' +
                                  'HORIZONS position of %s: %f arcsec; ' +
                                  'ignore this frame') %
                                 (filename, targetname,
                                  residuals[numpy.argmin(residuals)]*3600.))
             else:
-                target_flux.append(old_div(data[target_idx]['FLUX_' +
-                                                            _pp_conf.photmode],
-                                           max(data[target_idx]['FLUX_' +
-                                                                _pp_conf.photmode])))
+                target_flux.append(data[target_idx]['FLUX_'+_pp_conf.photmode] /
+                                   max(data[target_idx][
+                                       'FLUX_'+_pp_conf.photmode]))
                 target_snr.append(
                     data[target_idx]['FLUX_'+_pp_conf.photmode] /
                     data[target_idx]['FLUXERR_'+_pp_conf.photmode] /
-                    max(old_div(data[target_idx]['FLUX_'+_pp_conf.photmode],
-                                data[target_idx]['FLUXERR_'+_pp_conf.photmode])))
+                    max(data[target_idx]['FLUX_'+_pp_conf.photmode] /
+                        data[target_idx]['FLUXERR_'+_pp_conf.photmode]))
                 n_target_identified += 1
 
         # extract background source fluxes and snrs
@@ -189,18 +186,17 @@ def curve_of_growth_analysis(filenames, parameters,
             n_src = 50  # use only 50 sources
             for idx, src in enumerate(data.data[:n_src]):
                 if (numpy.any(numpy.isnan(src['FLUX_'+_pp_conf.photmode])) or
-                    numpy.any(numpy.isnan(src['FLUXERR_'+_pp_conf.photmode])) or
-                        src['FLAGS'] > 3):
+                    numpy.any(numpy.isnan(src['FLUXERR_'+_pp_conf.photmode]))
+                        or src['FLAGS'] > 3):
                     continue
 
                 # create growth curve
-                background_flux.append(old_div(src['FLUX_'+_pp_conf.photmode],
-                                               max(src['FLUX_'+_pp_conf.photmode])))
+                background_flux.append(src['FLUX_'+_pp_conf.photmode] /
+                                       max(src['FLUX_'+_pp_conf.photmode]))
                 background_snr.append(src['FLUX_'+_pp_conf.photmode] /
                                       src['FLUXERR_'+_pp_conf.photmode] /
-                                      max(old_div(src['FLUX_' +
-                                                      _pp_conf.photmode],
-                                                  src['FLUXERR_'+_pp_conf.photmode])))
+                                      max(src['FLUX_'+_pp_conf.photmode] /
+                                          src['FLUXERR_'+_pp_conf.photmode]))
 
     # investigate curve-of-growth
 
@@ -211,7 +207,7 @@ def curve_of_growth_analysis(filenames, parameters,
     n_target = len(target_flux)
     if n_target > 0:
         target_flux = (numpy.median(target_flux, axis=0),
-                       old_div(numpy.std(target_flux, axis=0), numpy.sqrt(n_target)))
+                       numpy.std(target_flux, axis=0)/numpy.sqrt(n_target))
         target_snr = numpy.median(target_snr, axis=0)
     else:
         target_flux = (numpy.zeros(len(aprads)), numpy.zeros(len(aprads)))
@@ -220,8 +216,8 @@ def curve_of_growth_analysis(filenames, parameters,
     n_background = len(background_flux)
     if n_background > 0:
         background_flux = (numpy.median(background_flux, axis=0),
-                           old_div(numpy.std(background_flux, axis=0),
-                                   numpy.sqrt(n_background)))
+                           numpy.std(background_flux, axis=0) /
+                           numpy.sqrt(n_background))
         background_snr = numpy.median(background_snr, axis=0)
     else:
         background_flux = (numpy.zeros(len(aprads)), numpy.zeros(len(aprads)))
@@ -279,7 +275,7 @@ def curve_of_growth_analysis(filenames, parameters,
     output['parameters'] = parameters
 
     # write results to file
-    outf = open(_pp_conf.diagroot+'curveofgrowth.dat', 'w')
+    outf = open('aperturephotometry_curveofgrowth.dat', 'w')
     outf.writelines('#      background              target          flux\n' +
                     '# rad   flux sigma snr      flux sigma snr  residual\n')
     for i in range(len(parameters['aprad'])):
@@ -317,8 +313,10 @@ def curve_of_growth_analysis(filenames, parameters,
 
     # diagnostics
     if diagnostics:
+        if display:
+            print('creating diagnostic output')
+        logging.info(' ~~~~~~~~~ creating diagnostic output')
         diag.add_photometry(output, extraction)
-        pass
 
     # update image headers
     for filename in filenames:

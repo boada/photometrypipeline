@@ -25,13 +25,25 @@ below. All functions presented here can be called from the terminal.
                              :func:`pp_register` for details.
    :param -solar: the photometric calibration (`pp_calibrate`) is only
                   using stars with solar-like colors (see
-                  `pp_calibrate` documentation for details)
+		  `pp_calibrate` documentation for details); if the
+		  calibration using `-solar` fails (too few matches with
+		  reference catalog), the calibration is automatically
+		  repeated without the `-solar` option
+   :param -rerun_registration: (optional) for some data, the image
+                               registration has to be run twice; this option
+			       will rerun the registration step, if not
+			       all frames registered successfull during
+			       the first try.
+   :param -asteroids: (optional) make use of ``-asteroids`` option of
+                      :func:`pp_distill`
+   :param -filter: (optional) make use of ``-filter`` option of
+                   :func:`pp_distill`, default: ``pos``
    :param images: images on which the pipeline is supposed to run,
                   wildcard symbols (``'*'``, ``'?'``) can be used; or,
                   by using ``all``, PP runs on all FITS files in
                   underlying directories (the range of images can be
                   limited by using the `-prefix` option)
-
+   
    The use of `pp_run` is discussed in the :ref:`quickstart` reference.
 
    This wrapper should work successfully for most data sets. If the
@@ -81,7 +93,7 @@ the logical order:
    input image is available from this table.
 	     
 
-.. function:: pp_extract ([-snr float], [-minarea integer], [-paramfile path], [-aprad float], [-telescope name], [-ignore_saturation], [-quiet], [-write_cat], images)
+.. function:: pp_extract ([-snr float], [-minarea integer], [-paramfile path], [-aprad float], [-telescope string], [-ignore_saturation], [-nodeblending], [-quiet], images)
 	      
    wrapper for `Source Extractor`_
 
@@ -102,6 +114,7 @@ the logical order:
                               flag saturated sources; as a result,
                               they are not rejected in the
                               registration and calibration process
+   :param -nodeblending: (optional) deactives Source Extractor deblending 
    :param -quiet: (optional) suppress output on the screen
    :param images: images to run `pp_extract` on
 
@@ -111,7 +124,7 @@ the logical order:
    function manually.
 
 
-.. function:: pp_register ([-snr float], [-minarea integer], [-cat catalogname], images)
+.. function:: pp_register ([-snr float], [-minarea integer], [-cat catalogname], [-source_tolerance string], [-nodeblending], images)
 
    astrometric calibration of the input images using `SCAMP`_ 
 
@@ -138,15 +151,15 @@ the logical order:
                              considered; the default is `high`; see
                              the `Source Extractor`_ manual section on
                              internal flags for details.
-
-
+   :param -nodeblending: (optional) deactives Source Extractor deblending
+                         in the detection of sources in the image frames
    :param images: images to run `pp_register` on
 
    `pp_register` automatically calls :func:`pp_extract` to identify
    all sources in the field of view of each image; the source catalogs
    are stored as ``.ldac`` files. The `-snr` and `-minarea` options
    are passed on to :func:`pp_extract`/`Source Extractor` in order to
-   specify the source properties.  `pp_register` utilizes `SCAMP` to
+   specify the source properties. `pp_register` utilizes `SCAMP` to
    match the source catalogs with astrometric catalogs as specified
    for this telescope/instrument combination (see
    :ref:`telescope_setup` reference), or as provided by the user with
@@ -160,14 +173,23 @@ the logical order:
    registered properly, each catalog is matched twice using
    information from the last `SCAMP` run. The routine ends if all
    images have been registered properly or all catalogs have been used
-   twice.
+   twice. Before starting the registration process, this function will
+   check the distribution of sources in all images in the plane of the
+   sky. If there appear to be two or more fields that are
+   non-overlapping and separted by at least 5 degrees, those fields
+   with fewer sources will be rejected and considered not
+   registered. The `-nodeblending` option will deactivate deblending
+   that is usually performed by Source Extractor. The advantage of
+   deactivating deblending is that bright and saturated sources are
+   recognized as single objects instead of a group of fainter sources;
+   this is especially useful in the registration process.
 
    The diagnostic output of this function is a table of the `SCAMP`
    output parameters and a presentation of each image overplotted with
    the catalog sources used in the matching.
 
 
-.. function:: pp_photometry ([-snr float], [-minarea float], [-aprad float], [-target targetname], [-background_only], [-target_only], images))
+.. function:: pp_photometry ([-snr float], [-minarea float], [-aprad float], [-target string], [-background_only], [-target_only], images))
 
    curve-of-growth analysis of the input images and source extraction
    using a derived optimum aperture radius resulting in final
@@ -189,7 +211,7 @@ the logical order:
                             curve-of-growth analysis
    :param -target_only: only account for the target in the
                         curve-of-growth analysis
-   :param image: images to run `pp_photometry` on
+   :param images: images to run `pp_photometry` on
 
 
    `pp_photometry` calls :func:`pp_extract` with a list of 20
@@ -308,7 +330,7 @@ the logical order:
 
 
 
-.. function:: pp_distill ([-target string], [-offset float float], [-fixed_coo float float], images)
+.. function:: pp_distill ([-target string], [-offset float float], [-positions string], [-fixedtargets string], [-variable_stars], [-asteroids], [-reject string], images)
 
    extraction of calibrated photometry for targets
 
@@ -338,7 +360,16 @@ the logical order:
                       asteroids in the image field using IMCCE's
                       SkyBoT service; extract objects that are bright
                       enough and have accurate orbits
-
+   :param -reject: (optional) this option enables the filtering of
+      data based on predefined criteria before they enter the final
+      photometry file; a single rejection schema identifier or a
+      comma-separated list of identifiers (no whitespaces) can be
+      provided. Rejected observations will still show up in the final
+      photomoetry file, but will be commented out using ``#``; no
+      diagnostic output will be generated for rejected
+      observations. Valid identifiers are: ``pos`` (rejects
+      observations with positional residuals greater than 10
+      arcsec). Default: ``pos``
    :param images:  images to run `pp_distill` on
 
    This function will automatically read the target name from the FITS

@@ -37,6 +37,8 @@ from astropy.io import fits
 import scipy.optimize as optimization
 import warnings
 warnings.simplefilter("ignore", UserWarning)
+from pandas import read_sql
+
 
 try:
     from scipy import spatial
@@ -82,6 +84,7 @@ class catalog(object):
         self.history = ''  # catalog history
         self.magsys = ''  # [AB|Vega|instrumental]
         self.display = display
+        self.filtername = None
 
     # data access functions
 
@@ -141,33 +144,36 @@ class catalog(object):
 
         return n_raw - len(self.data)
 
-    def add_field(self, field_name, field_array, field_type='D'):
+    def add_field(self, field_name, field_array, field_type=None):
         """
         single-field wrapper for add_fields
         """
-        # numpy.recarray treatment
-        # return self.add_fields([field_name], [field_array], [field_type])
+        if field_type is not None:
+            return self.data.add_column(Column(field_array, name=field_name,
+                                               format=field_type))
+        else:
+            return self.data.add_column(Column(field_array, name=field_name))
 
-        # astropy.table treatment
-        return self.data.add_column(Column(field_array, name=field_name,
-                                           format=field_type))
-
-    def add_fields(self, field_names, field_arrays, field_types):
+    def add_fields(self, field_names, field_arrays, field_types=None):
         """
         add fields to self.data
         input: field_names, field_arrays, field_types
         output: number of added fields
         """
 
-        assert len(field_names) == len(field_arrays) == len(field_types)
+        assert len(field_names) == len(field_arrays)
 
         if self.data is None:
             self.data = Table()
 
         for i in range(len(field_names)):
-            self.data.add_column(Column(np.array(field_arrays[i]),
-                                        name=field_names[i],
-                                        format=field_types[i]))
+            if field_types is None:
+                self.data.add_column(Column(np.array(field_arrays[i]),
+                                            name=field_names[i]))
+            else:
+                self.data.add_column(Column(np.array(field_arrays[i]),
+                                            name=field_names[i],
+                                            format=field_types[i]))
 
         return len(field_arrays)
 
@@ -184,9 +190,9 @@ class catalog(object):
                (sort=['ascending', 'descending', None])
         return: number of sources downloaded
 
-        astrometric catalogs: ra.deg, dec.deg, e_ra.deg, e_dec.deg,
+        astrometric catalogs: ra_deg, dec_deg, e_ra_deg, e_dec_deg,
                               mag, e_mag, [epoch_jd, Gaia only]
-        photometric catalogs: ra.deg, dec.deg, e_ra.deg, e_dec.deg,
+        photometric catalogs: ra_deg, dec_deg, e_ra_deg, e_dec_deg,
                               [mags], [e_mags], epoch_jd
         """
 
@@ -202,6 +208,7 @@ class catalog(object):
                                                    ra_deg, dec_deg,
                                                    rad_deg),
                   end=' ', flush=True)
+
         logging.info(('query Vizier for {:s} at {:7.3f}/{:+.3f} in '
                       + 'a {:.2f} deg radius').format(self.catalogname,
                                                       ra_deg, dec_deg,
@@ -242,12 +249,12 @@ class catalog(object):
 
             # rename column names using PP conventions
             self.data.rename_column('objID', 'ident')
-            self.data.rename_column('RAJ2000', 'ra.deg')
-            self.data.rename_column('DEJ2000', 'dec.deg')
-            self.data.rename_column('e_RAJ2000', 'e_ra.deg')
-            self.data['e_ra.deg'].convert_unit_to(u.deg)
-            self.data.rename_column('e_DEJ2000', 'e_dec.deg')
-            self.data['e_dec.deg'].convert_unit_to(u.deg)
+            self.data.rename_column('RAJ2000', 'ra_deg')
+            self.data.rename_column('DEJ2000', 'dec_deg')
+            self.data.rename_column('e_RAJ2000', 'e_ra_deg')
+            self.data['e_ra_deg'].convert_unit_to(u.deg)
+            self.data.rename_column('e_DEJ2000', 'e_dec_deg')
+            self.data['e_dec_deg'].convert_unit_to(u.deg)
             self.data.rename_column('gmag', 'gp1mag')
             self.data.rename_column('e_gmag', 'e_gp1mag')
             self.data.rename_column('rmag', 'rp1mag')
@@ -289,10 +296,10 @@ class catalog(object):
 
             # rename column names using PP conventions
             self.data.rename_column('object_id', 'ident')
-            self.data.rename_column('raj2000', 'ra.deg')
-            self.data.rename_column('dej2000', 'dec.deg')
-            self.data.rename_column('e_raj2000', 'e_ra.deg')
-            self.data.rename_column('e_dej2000', 'e_dec.deg')
+            self.data.rename_column('raj2000', 'ra_deg')
+            self.data.rename_column('dej2000', 'dec_deg')
+            self.data.rename_column('e_raj2000', 'e_ra_deg')
+            self.data.rename_column('e_dej2000', 'e_dec_deg')
             self.data.rename_column('u_psf', 'umag')
             self.data.rename_column('e_u_psf', 'e_umag')
             self.data.rename_column('v_psf', 'vmag')
@@ -338,13 +345,14 @@ class catalog(object):
 
             # rename column names using PP conventions
             self.data.rename_column('Source', 'ident')
-            self.data.rename_column('RA_ICRS', 'ra.deg')
-            self.data.rename_column('DE_ICRS', 'dec.deg')
-            self.data.rename_column('e_RA_ICRS', 'e_ra.deg')
-            self.data['e_ra.deg'].convert_unit_to(u.deg)
-            self.data.rename_column('e_DE_ICRS', 'e_dec.deg')
-            self.data['e_dec.deg'].convert_unit_to(u.deg)
+            self.data.rename_column('RA_ICRS', 'ra_deg')
+            self.data.rename_column('DE_ICRS', 'dec_deg')
+            self.data.rename_column('e_RA_ICRS', 'e_ra_deg')
+            self.data['e_ra_deg'].convert_unit_to(u.deg)
+            self.data.rename_column('e_DE_ICRS', 'e_dec_deg')
+            self.data['e_dec_deg'].convert_unit_to(u.deg)
             self.data.rename_column('Epoch', 'epoch_yr')
+            self.data['mag'] = self.data['Gmag']  # required for scamp
 
             # TBD:
             # - implement proper error ellipse handling
@@ -364,7 +372,7 @@ class catalog(object):
 
             try:
                 self.data = vquery.query_region(field,
-                                                radius=rad_deg.u.deg,
+                                                radius=rad_deg*u.deg,
                                                 catalog="I/337/tgas",
                                                 cache=False)[0]
             except IndexError:
@@ -377,12 +385,12 @@ class catalog(object):
 
             # rename column names using PP conventions
             self.data.rename_column('Source', 'ident')
-            self.data.rename_column('RA_ICRS', 'ra.deg')
-            self.data.rename_column('DE_ICRS', 'dec.deg')
-            self.data.rename_column('e_RA_ICRS', 'e_ra.deg')
-            self.data['e_ra.deg'].convert_unit_to(u.deg)
-            self.data.rename_column('e_DE_ICRS', 'e_dec.deg')
-            self.data['e_dec.deg'].convert_unit_to(u.deg)
+            self.data.rename_column('RA_ICRS', 'ra_deg')
+            self.data.rename_column('DE_ICRS', 'dec_deg')
+            self.data.rename_column('e_RA_ICRS', 'e_ra_deg')
+            self.data['e_ra_deg'].convert_unit_to(u.deg)
+            self.data.rename_column('e_DE_ICRS', 'e_dec_deg')
+            self.data['e_dec_deg'].convert_unit_to(u.deg)
             self.data.rename_column('__Gmag_', 'mag')
 
             self.data.add_column(Column(np.ones(len(self.data))*2457023.5,
@@ -431,8 +439,8 @@ class catalog(object):
 
             ### rename column names using PP conventions
             self.data.rename_column('_2MASS', 'ident')
-            self.data.rename_column('RAJ2000', 'ra.deg')
-            self.data.rename_column('DEJ2000', 'dec.deg')
+            self.data.rename_column('RAJ2000', 'ra_deg')
+            self.data.rename_column('DEJ2000', 'dec_deg')
             self.data.rename_column('Kmag', 'Ksmag')
             self.data.rename_column('e_Kmag', 'e_Ksmag')
             self.data['mag'] = self.data['Jmag']  # use J as default mag
@@ -448,7 +456,7 @@ class catalog(object):
                          self.data['errMin']*np.sin(arc_xopt) *
                          np.sin(self.data['errPA'].to(u.rad)))
             self.data.add_column(Column(data=ra_err*1000,
-                                        name='e_ra.deg', unit=u.mas),
+                                        name='e_ra_deg', unit=u.mas),
                                  index=2)
 
             arc_yopt = np.arctan(self.data['errMin']/self.data['errMaj'] *
@@ -459,7 +467,7 @@ class catalog(object):
                           self.data['errMin']*np.sin(arc_yopt) *
                           np.cos(self.data['errPA'].to(u.rad)))
             self.data.add_column(Column(data=dec_err*1000,
-                                        name='e_dec.deg', unit=u.mas), index=3)
+                                        name='e_dec_deg', unit=u.mas), index=3)
 
             # remove error ellipse columns
             self.data.remove_column('errMaj')
@@ -489,17 +497,17 @@ class catalog(object):
 
             # rename column names using PP conventions
             self.data.rename_column('URAT1', 'ident')
-            self.data.rename_column('RAJ2000', 'ra.deg')
-            self.data.rename_column('DEJ2000', 'dec.deg')
+            self.data.rename_column('RAJ2000', 'ra_deg')
+            self.data.rename_column('DEJ2000', 'dec_deg')
             self.data.rename_column('f.mag', 'mag')
             self.data.rename_column('e_f.mag', 'e_mag')
 
             self.data.add_column(Column(data=self.data['sigm'].data,
-                                        name='e_ra.deg',
+                                        name='e_ra_deg',
                                         unit=self.data['sigm'].unit),
                                  index=2)
             self.data.add_column(Column(data=self.data['sigm'].data,
-                                        name='e_dec.deg',
+                                        name='e_dec_deg',
                                         unit=self.data['sigm'].unit),
                                  index=4)
             self.data.remove_column('sigm')
@@ -530,10 +538,10 @@ class catalog(object):
 
             # rename column names using PP conventions
             self.data.rename_column('recno', 'ident')
-            self.data.rename_column('RAJ2000', 'ra.deg')
-            self.data.rename_column('DEJ2000', 'dec.deg')
-            self.data.rename_column('e_RAJ2000', 'e_ra.deg')
-            self.data.rename_column('e_DEJ2000', 'e_dec.deg')
+            self.data.rename_column('RAJ2000', 'ra_deg')
+            self.data.rename_column('DEJ2000', 'dec_deg')
+            self.data.rename_column('e_RAJ2000', 'e_ra_deg')
+            self.data.rename_column('e_DEJ2000', 'e_dec_deg')
             self.data.rename_column('g_mag', 'gmag')
             self.data.rename_column('e_g_mag', 'e_gmag')
             self.data.rename_column('r_mag', 'rmag')
@@ -567,10 +575,10 @@ class catalog(object):
 
             # rename column names using PP conventions
             self.data.rename_column('SDSS9', 'ident')
-            self.data.rename_column('RA_ICRS', 'ra.deg')
-            self.data.rename_column('DE_ICRS', 'dec.deg')
-            self.data.rename_column('e_RA_ICRS', 'e_ra.deg')
-            self.data.rename_column('e_DE_ICRS', 'e_dec.deg')
+            self.data.rename_column('RA_ICRS', 'ra_deg')
+            self.data.rename_column('DE_ICRS', 'dec_deg')
+            self.data.rename_column('e_RA_ICRS', 'e_ra_deg')
+            self.data.rename_column('e_DE_ICRS', 'e_dec_deg')
 
             # perform correction to AB system for SDSS
             # http://www.sdss3.org/dr8/algorithms/fluxcal.php#SDSStoAB
@@ -629,10 +637,10 @@ class catalog(object):
 
             # rename column names using PP conventions
             self.data.rename_column('objID', 'ident')
-            self.data.rename_column('ra', 'ra.deg')
-            self.data.rename_column('dec', 'dec.deg')
-            self.data.rename_column('raErr', 'e_ra.deg')
-            self.data.rename_column('decErr', 'e_dec.deg')
+            self.data.rename_column('ra', 'ra_deg')
+            self.data.rename_column('dec', 'dec_deg')
+            self.data.rename_column('raErr', 'e_ra_deg')
+            self.data.rename_column('decErr', 'e_dec_deg')
             self.data.rename_column('fiberMag_u', 'umag')
             self.data.rename_column('fiberMagErr_u', 'e_umag')
             self.data.rename_column('fiberMag_g', 'gmag')
@@ -650,8 +658,8 @@ class catalog(object):
             self.data['zmag'] += 0.02
 
             # make sure our RA/DEC errors have units
-            self.data['e_ra.deg'] = self.data['e_ra.deg'] * u.arcsec
-            self.data['e_dec.deg'] = self.data['e_dec.deg'] * u.arcsec
+            self.data['e_ra_deg'] = self.data['e_ra_deg'] * u.arcsec
+            self.data['e_dec_deg'] = self.data['e_dec_deg'] * u.arcsec
 
         else:
             if self.display:
@@ -668,8 +676,8 @@ class catalog(object):
         self.history = '{:d} sources downloaded'.format(len(self.data))
 
         # convert all coordinate uncertainties to degrees
-        self.data['e_ra.deg'] = self.data['e_ra.deg'].to(u.deg)
-        self.data['e_dec.deg'] = self.data['e_dec.deg'].to(u.deg)
+        self.data['e_ra_deg'] = self.data['e_ra_deg'].to(u.deg)
+        self.data['e_dec_deg'] = self.data['e_dec_deg'].to(u.deg)
 
         # set catalog magnitude system
         self.magsystem = _pp_conf.allcatalogs_magsys[self.catalogname]
@@ -713,7 +721,10 @@ class catalog(object):
             if telescope_keyword in line:
                 telescope = line.split('\'')[1]
         self.catalogname = filename
-        self.origin = '{:s};{:s}'.format(telescope.strip(), fits_filename)
+        if fits_filename is not None:
+            self.origin = '{:s};{:s}'.format(telescope.strip(), fits_filename)
+        else:
+            self.origin = '{:s};'.format(telescope.strip())
         self.magsys = 'instrumental'
 
         # reject flagged sources (if requested)
@@ -731,13 +742,13 @@ class catalog(object):
 
         # rename columns
         if 'XWIN_WORLD' in self.fields:
-            self.data.rename_column('XWIN_WORLD', 'ra.deg')
+            self.data.rename_column('XWIN_WORLD', 'ra_deg')
         if 'YWIN_WORLD' in self.fields:
-            self.data.rename_column('YWIN_WORLD', 'dec.deg')
+            self.data.rename_column('YWIN_WORLD', 'dec_deg')
 
         # force positive RA values
-        flip_idc = np.where(self.data['ra.deg'] < 0)[0]
-        self.data['ra.deg'][flip_idc] += 360
+        flip_idc = np.where(self.data['ra_deg'] < 0)[0]
+        self.data['ra_deg'][flip_idc] += 360
 
         logging.info(('read {:d} sources in {:d} columns '
                       'from LDAC file {:s}').format(
@@ -765,21 +776,21 @@ class catalog(object):
         # hdrhdu.header['TDIM1'] = ('(80, 36)') # remove?
 
         # create data table
-        colname_dic = {'ra.deg': 'XWIN_WORLD', 'dec.deg': 'YWIN_WORLD',
-                       'e_ra.deg': 'ERRAWIN_WORLD',
-                       'e_dec.deg': 'ERRBWIN_WORLD',
+        colname_dic = {'ra_deg': 'XWIN_WORLD', 'dec_deg': 'YWIN_WORLD',
+                       'e_ra_deg': 'ERRAWIN_WORLD',
+                       'e_dec_deg': 'ERRBWIN_WORLD',
                        'mag': 'MAG'}
-        format_dic = {'ra.deg': '1D', 'dec.deg': '1D',
-                      'e_ra.deg': '1E',
-                      'e_dec.deg': '1E',
+        format_dic = {'ra_deg': '1D', 'dec_deg': '1D',
+                      'e_ra_deg': '1E',
+                      'e_dec_deg': '1E',
                       'mag': '1E'}
-        disp_dic = {'ra.deg': 'E15', 'dec.deg': 'E15',
-                    'e_ra.deg': 'E12',
-                    'e_dec.deg': 'E12',
+        disp_dic = {'ra_deg': 'E15', 'dec_deg': 'E15',
+                    'e_ra_deg': 'E12',
+                    'e_dec_deg': 'E12',
                     'mag': 'F8.4'}
-        unit_dic = {'ra.deg': 'deg', 'dec.deg': 'deg',
-                    'e_ra.deg': 'deg',
-                    'e_dec.deg': 'deg',
+        unit_dic = {'ra_deg': 'deg', 'dec_deg': 'deg',
+                    'e_ra_deg': 'deg',
+                    'e_dec_deg': 'deg',
                     'mag': 'mag'}
 
         data_cols = []
@@ -824,34 +835,20 @@ class catalog(object):
 
     # ascii interface
 
-    # def write_ascii(self, filename):
-    #     """
-    #     write catalog to ascii table
-    #     input: target filename
-    #     return: number of sources written to file
-    #     """
+    def write_table(self, filename, format='ascii'):
+        """
+        write catalog to file using astropy.table.Table.write
+        input: target filename, file format
+        return: number of sources written to file
+        """
 
-    #     # prepare headerline and formatline
-    #     legend, headerline, formatline = '', '', ''
-    #     for idx in range(len(self.fields)):
-    #         legend += '%d - %s\n' % (idx, self.fields[idx])
-    #         headerline += ('|%13s ' % str(self.fields[idx]))
-    #         if 'E' in str(self.data.formats[idx]):
-    #             formatline += '%15E'
-    #         elif 'D' in str(self.data.formats[idx]):
-    #             formatline += '%15f'
-    #         elif 'I' in str(self.data.formats[idx]) or \
-    #              'J' in str(self.data.formats[idx]):
-    #             formatline += '%15d'
+        # write data into file
+        self.data.write(filename, format=format)
 
-    #     # write data into file
-    #     np.savetxt(filename, self.data, fmt=formatline,
-    #                header=legend+headerline)
+        logging.info('wrote %d sources from %s to file %s' %
+                     (self.shape[0], self.catalogname, filename))
 
-    #     logging.info('wrote %d sources from %s to ASCII file %s' %
-    #                  (self.shape[0], self.catalogname, filename))
-
-    #     return self.shape[0]
+        return self.shape[0]
 
     # SQLite interface
 
@@ -867,46 +864,37 @@ class catalog(object):
         db_conn = sql.connect(filename)
         db = db_conn.cursor()
 
-        # create header table
-        db.execute("CREATE TABLE header (" +
-                   "[name] TEXT, [origin] TEXT, [description] TEXT, " +
-                   "[magsys] TEXT, [obstime] REAL, [exptime] REAL, [obj] TEXT)")
-        db.execute("INSERT INTO header VALUES (?,?,?,?,?,?,?)",
-                   (self.catalogname, self.origin, self.history,
-                    self.magsys, self.obstime[0], self.obstime[1],
-                    self.obj))
+        from copy import deepcopy
+        write_table = deepcopy(self.data)
 
-        # create data table
-        table_cmd = "CREATE TABLE data ("
-        for key_idx, key in enumerate(self.fields):
-            db_key = key
-            if type(self.data[key][0]) == np.float32 \
-               or type(self.data[key][0]) == np.float64:
-                table_cmd += "'{:s}' REAL".format(db_key)
-            elif type(self.data[key][0]) == np.int16 \
-                    or type(self.data[key][0]) == np.int32:
-                table_cmd += "'{:s}' INTEGER".format(db_key)
-            elif type(self.data[key][0]) == np.string_:
-                table_cmd += "'{:s}' TEXT".format(db_key)
-            else:
-                print('unknown data type: ' + type(self.data[key][0]))
-            if key_idx < len(self.fields)-1:
-                table_cmd += ", "
+        # rename Johnson filternames to avoid collisions with SDSS
+        for filtername in ['B', 'V', 'R', 'I']:
+            if '_'+filtername+'mag' in list(write_table.columns):
+                write_table.rename_column(
+                    '_{:s}mag'.format(filtername),
+                    '_{:s}Johnsonmag'.format(filtername))
+                write_table.rename_column(
+                    '_e_{:s}mag'.format(filtername),
+                    '_e_{:s}Johnsonmag'.format(filtername))
+            elif filtername+'mag' in list(write_table.columns):
+                write_table.rename_column(
+                    '{:s}mag'.format(filtername),
+                    '{:s}Johnsonmag'.format(filtername))
+                write_table.rename_column(
+                    'e_{:s}mag'.format(filtername),
+                    'e_{:s}Johnsonmag'.format(filtername))
 
-        table_cmd += ")"
-        db.execute(table_cmd)
+        # create header and write to database
+        header = Table([[self.catalogname], [self.origin], [self.history],
+                        [self.magsys], [self.obstime[0]], [self.obstime[1]],
+                        [self.obj], [self.filtername]],
+                       names=['name', 'origin', 'description',
+                              'magsys', 'obstime', 'exptime', 'obj',
+                              'filtername'])
+        header.to_pandas().to_sql('header', db_conn, index=False)
 
-        # create a data array in which data types are converted to SQL types
-        sqltypes = {np.float32: np.float64, np.float64: np.float64,
-                    np.int16: np.int64, np.int32: np.int64}
-
-        data_cols = [self.data[key].astype(sqltypes[type(self.data[key][0])])
-                     for key in self.fields]
-        data = [[data_cols[j][i] for j in range(len(data_cols))]
-                for i in range(len(data_cols[0]))]
-        db.executemany("INSERT INTO data VALUES (" +
-                       ','.join(['?' for i in range(len(self.fields))]) +
-                       ')', data)
+        # write data to database
+        write_table.to_pandas().to_sql('data', db_conn, index=False)
 
         db_conn.commit()
 
@@ -924,6 +912,8 @@ class catalog(object):
                                       self.history]),
                           filename)))
 
+        db_conn.close()
+
         return n_obj
 
     def read_database(self, filename):
@@ -939,48 +929,38 @@ class catalog(object):
                 logging.error('ERROR: could not find database', filename)
             return []
 
-        # query database header
-        db.execute("SELECT * FROM header")
-        rows = db.fetchall()
+        # reader in header information
+        header = read_sql('SELECT * FROM header', db_conn)
 
-        self.catalogname = rows[0][0]  # .decode('utf-8')
-        self.origin = rows[0][1]  # .decode('utf-8')
-        self.history = rows[0][2]  # .decode('utf-8')
-        self.magsys = rows[0][3]  # .decode('utf-8')
-        self.obstime[0] = rows[0][4]
-        self.obstime[1] = rows[0][5]
-        self.obj = rows[0][6]  # .decode('utf-8')
+        self.catalogname = header['name'][0]
+        self.origin = header['origin'][0]
+        self.history = header['description'][0]
+        self.magsys = header['magsys'][0]
+        self.obstime[0] = header['obstime'][0]
+        self.obstime[1] = header['exptime'][0]
+        self.obj = header['obj'][0]
+        self.filtername = header['filtername'][0]
 
-        # query database sources
-        db.execute("SELECT * FROM data")
-        rows = db.fetchall()
+        # read in data table
+        self.data = Table.from_pandas(read_sql('SELECT * FROM data',
+                                               db_conn))
 
-        # read in field names and types
-        fieldnames, types = [], []
-        type_dict = {float: np.float64,
-                     int: np.int64, str: np.string_}
-        for key_idx, key in enumerate(db.description):
-            fieldnames.append(key[0])
-            # if isinstance(rows[0][key_idx], bytes):
-            #     continue
-            #     # print(rows[0][key_idx])
-            #     # rows[0][key_idx] = rows[0][key_idx].decode('utf-8')
-            types.append(type_dict[type(rows[0][key_idx])])
-
-        # read in data in FITS_rec structure by creating a
-        # temporary FITS table
-        data = [[] for i in range(len(fieldnames))]
-        for row in rows:
-            for col in range(len(row)):
-                data[col].append(types[col](row[col]))
-        type_dict = {np.float64: 'E', np.int64: 'I', np.string_: 'A'}
-        columns = [fits.Column(name=fieldnames[idx],
-                               format=type_dict[types[idx]],
-                               array=data[idx])
-                   for idx in range(len(data))]
-        tbhdu = fits.BinTableHDU.from_columns(columns)
-
-        self.data = Table(tbhdu.data)
+        # rename Johnson filternames
+        for filtername in ['B', 'V', 'R', 'I']:
+            if '_'+filtername+'Johnsonmag' in list(self.data.columns):
+                self.data.rename_column(
+                    '_{:s}Johnsonmag'.format(filtername),
+                    '_{:s}mag'.format(filtername))
+                self.data.rename_column(
+                    '_e_{:s}Johnsonmag'.format(filtername),
+                    '_e_{:s}mag'.format(filtername))
+            elif filtername+'Johnsonmag' in list(self.data.columns):
+                self.data.rename_column(
+                    '{:s}Johnsonmag'.format(filtername),
+                    '{:s}mag'.format(filtername))
+                self.data.rename_column(
+                    'e_{:s}Johnsonmag'.format(filtername),
+                    'e_{:s}mag'.format(filtername))
 
         return self.shape[0]
 
@@ -1505,10 +1485,10 @@ class catalog(object):
     # catalog operations
 
     def match_with(self, catalog,
-                   match_keys_this_catalog=['ra.deg', 'dec.deg'],
-                   match_keys_other_catalog=['ra.deg', 'dec.deg'],
-                   extract_this_catalog=['ra.deg', 'dec.deg'],
-                   extract_other_catalog=['ra.deg', 'dec.deg'],
+                   match_keys_this_catalog=['ra_deg', 'dec_deg'],
+                   match_keys_other_catalog=['ra_deg', 'dec_deg'],
+                   extract_this_catalog=['ra_deg', 'dec_deg'],
+                   extract_other_catalog=['ra_deg', 'dec_deg'],
                    tolerance=0.5/3600):
         """ match sources from different catalogs based on two fields
             (e.g., postions)

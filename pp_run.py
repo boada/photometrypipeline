@@ -31,12 +31,8 @@ try:
 except ImportError:
     print('Module numpy not found. Please install with: pip install numpy')
     sys.exit()
-import shutil
 import logging
-import subprocess
 import argparse
-import shlex
-import time
 try:
     from astropy.io import fits
 except ImportError:
@@ -67,7 +63,8 @@ logging.basicConfig(filename=_pp_conf.log_filename,
 
 
 def run_the_pipeline(filenames, man_targetname, man_filtername,
-                     fixed_aprad, source_tolerance, solar):
+                     fixed_aprad, source_tolerance, solar,
+                     rerun_registration, asteroids):
     """
     wrapper to run the photometry pipeline
     """
@@ -75,20 +72,21 @@ def run_the_pipeline(filenames, man_targetname, man_filtername,
     # increment pp process idx
     _pp_conf.pp_process_idx += 1
 
-    # reset diagnostics for this data set
-    _pp_conf.dataroot, _pp_conf.diagroot, \
-        _pp_conf.index_filename, _pp_conf.reg_filename, _pp_conf.cal_filename, \
-        _pp_conf.res_filename = _pp_conf.setup_diagnostics()
+    # # reset diagnostics for this data set
+    # _pp_conf.dataroot, _pp_conf.diagroot, \
+    #     _pp_conf.index_filename, _pp_conf.reg_filename, _pp_conf.cal_filename, \
+    #     _pp_conf.res_filename = _pp_conf.setup_diagnostics()
 
     # setup logging again (might be a different directory)
-    logging.basicConfig(filename=_pp_conf.log_filename,
+    logging.basicConfig(filename='LOG',
                         level=_pp_conf.log_level,
                         format=_pp_conf.log_formatline,
                         datefmt=_pp_conf.log_datefmt)
 
     # read telescope information from fits headers
     # check that they are the same for all images
-    logging.info('##### new pipeline process in %s #####' % _pp_conf.dataroot)
+    logging.info('##### new pipeline process in {:s} #####'.format(
+        os.getcwd()))
     logging.info(('check for same telescope/instrument for %d ' +
                   'frames') % len(filenames))
     instruments = []
@@ -190,24 +188,33 @@ def run_the_pipeline(filenames, man_targetname, man_filtername,
     snr, source_minarea = obsparam['source_snr'], obsparam['source_minarea']
     aprad = obsparam['aprad_default']
 
-    print('\n----- run image registration\n')
-    registration = pp_register.register(filenames, telescope, snr,
-                                        source_minarea, aprad,
-                                        None, obsparam,
-                                        obsparam['source_tolerance'],
-                                        display=True,
-                                        diagnostics=True)
+    registration_run_number = 0
+    while True:
 
-    if len(registration['badfits']) == len(filenames):
-        summary_message = "<FONT COLOR=\"red\">registration failed</FONT>"
-    elif len(registration['goodfits']) == len(filenames):
-        summary_message = "<FONT COLOR=\"green\">all images registered" + \
-            "</FONT>; "
-    else:
-        summary_message = "<FONT COLOR=\"orange\">registration failed for " + \
-            ("%d/%d images</FONT>; " %
-             (len(registration['badfits']),
-              len(filenames)))
+        print('\n----- run image registration\n')
+        registration = pp_register.register(filenames, telescope, snr,
+                                            source_minarea, aprad,
+                                            None, obsparam,
+                                            obsparam['source_tolerance'],
+                                            False,
+                                            display=True,
+                                            diagnostics=True)
+
+        if len(registration['badfits']) == len(filenames):
+            summary_message = "<FONT COLOR=\"red\">registration failed</FONT>"
+        elif len(registration['goodfits']) == len(filenames):
+            summary_message = "<FONT COLOR=\"green\">all images registered" + \
+                "</FONT>; "
+            break
+        else:
+            summary_message = "<FONT COLOR=\"orange\">registration failed for " + \
+                ("%d/%d images</FONT>; " %
+                 (len(registration['badfits']),
+                  len(filenames)))
+        # break from loop if maximum number of iterations (2) achieved
+        registration_run_number += 1
+        if registration_run_number == 2:
+            break
 
     # add information to summary website, if requested
     if _pp_conf.use_diagnostics_summary:
@@ -215,13 +222,6 @@ def run_the_pipeline(filenames, man_targetname, man_filtername,
 
     # in case not all image were registered successfully
     filenames = registration['goodfits']
-
-    # # stop here if filtername == None
-    # if filtername == None:
-    #     logging.info('Nothing else to do for this filter (%s)' %
-    #                  filtername)
-    #     print('Nothing else to do for this filter (%s)' % filtername)
-    #     return None
 
     # stop here if registration failed for all images
     if len(filenames) == 0:
@@ -239,7 +239,7 @@ def run_the_pipeline(filenames, man_targetname, man_filtername,
     else:
         aprad = fixed_aprad  # skip curve_of_growth analysis
 
-    print('\n----- derive optimium photometry aperture\n')
+    print('\n----- derive optimum photometry aperture\n')
     phot = pp_photometry.photometry(filenames, snr, source_minarea, aprad,
                                     man_targetname, background_only,
                                     target_only,
@@ -271,32 +271,42 @@ def run_the_pipeline(filenames, man_targetname, man_filtername,
 
     print('\n----- run photometric calibration\n')
 
-    calibration = pp_calibrate.calibrate(filenames, minstars, filtername,
-                                         manualcatalog, obsparam, solar=solar,
-                                         display=True,
-                                         diagnostics=True)
+    while True:
+        calibration = pp_calibrate.calibrate(filenames, minstars,
+                                             filtername,
+                                             manualcatalog, obsparam,
+                                             solar=solar,
+                                             display=True,
+                                             diagnostics=True)
 
-    # if calibration == None:
-    #     print('Nothing to do!')
-    #     logging.error('Nothing to do! Error in pp_calibrate')
-    #     diag.abort('pp_calibrate')
-    #     sys.exit(1)
+        try:
+            zps = [frame['zp'] for frame in calibration['zeropoints']]
+            zp_errs = [frame['zp_sig']
+                       for frame in calibration['zeropoints']]
 
-    try:
-        zps = [frame['zp'] for frame in calibration['zeropoints']]
-        zp_errs = [frame['zp_sig'] for frame in calibration['zeropoints']]
+            # rerun calibration
+            if solar and any(np.isnan(zps)):
+                logging.warning(('Photometric calibration failed for one '
+                                 'or more frames; re-try without the '
+                                 'solar option'))
+                print(('Warning: Photometric calibration '
+                       'failed for one or more frames; '
+                       're-try without the -solar option'))
+                solar = False
+                continue
 
-        if calibration['ref_cat'] is not None:
-            refcatname = calibration['ref_cat'].catalogname
-        else:
-            refcatname = 'instrumental magnitudes'
-        summary_message = "<FONT COLOR=\"green\">average zeropoint = " + \
-            ("%5.2f+-%5.2f using %s</FONT>; " %
-             (numpy.average(zps),
-              numpy.average(zp_errs),
-              refcatname))
-    except TypeError:
-        summary_message = "<FONT COLOR=\"red\">no phot. calibration</FONT>; "
+            if calibration['ref_cat'] is not None:
+                refcatname = calibration['ref_cat'].catalogname
+            else:
+                refcatname = 'instrumental magnitudes'
+                summary_message = "<FONT COLOR=\"green\">average zeropoint = " + \
+                    ("%5.2f+-%5.2f using %s</FONT>; " %
+                     (np.average(zps),
+                      np.average(zp_errs),
+                      refcatname))
+        except TypeError:
+            summary_message = "<FONT COLOR=\"red\">no phot. calibration</FONT>; "
+        break
 
     # add information to summary website, if requested
     if _pp_conf.use_diagnostics_summary:
@@ -307,15 +317,17 @@ def run_the_pipeline(filenames, man_targetname, man_filtername,
     distillate = pp_distill.distill(calibration['catalogs'],
                                     man_targetname, [0, 0],
                                     None, None,
+                                    rejectionfilter,
+                                    asteroids=asteroids,
                                     display=True, diagnostics=True)
 
-    targets = numpy.array(list(distillate['targetnames'].keys()))
+    targets = np.array(list(distillate['targetnames'].keys()))
     try:
         target = targets[targets != 'control_star'][0]
         mags = [frame[7] for frame in distillate[target]]
         summary_message = ("average target brightness and std: " +
-                           "%5.2f+-%5.2f\n" % (numpy.average(mags),
-                                               numpy.std(mags)))
+                           "%5.2f+-%5.2f\n" % (np.average(mags),
+                                               np.std(mags)))
     except IndexError:
         summary_message = "no primary target extracted"
 
@@ -348,6 +360,16 @@ if __name__ == '__main__':
     parser.add_argument('-solar',
                         help='restrict to solar-color stars',
                         action="store_true", default=False)
+    parser.add_argument('-rerun_registration',
+                        help=('rerun registration step if not '
+                              'successful for all images'),
+                        action="store_true", default=False)
+    parser.add_argument('-asteroids',
+                        help='extract all known asteroids',
+                        action="store_true", default=False)
+    parser.add_argument('-reject',
+                        help='schemas for target rejection',
+                        nargs=1, default='pos')
     parser.add_argument('images', help='images to process or \'all\'',
                         nargs='+')
 
@@ -358,6 +380,9 @@ if __name__ == '__main__':
     fixed_aprad = float(args.fixed_aprad)
     source_tolerance = args.source_tolerance
     solar = args.solar
+    rerun_registration = args.rerun_registration
+    asteroids = args.asteroids
+    rejectionfilter = args.reject
     filenames = sorted(args.images)
 
     # if filenames = ['all'], walk through directories and run pipeline
@@ -391,7 +416,8 @@ if __name__ == '__main__':
                 os.chdir(root)
 
                 run_the_pipeline(filenames, man_targetname, man_filtername,
-                                 fixed_aprad, source_tolerance, solar)
+                                 fixed_aprad, source_tolerance, solar,
+                                 rerun_registration, asteroids)
                 os.chdir(_masterroot_directory)
             else:
                 print('\n NOTHING TO DO IN %s' % root)
@@ -399,5 +425,6 @@ if __name__ == '__main__':
     else:
         # call run_the_pipeline only on filenames
         run_the_pipeline(filenames, man_targetname, man_filtername,
-                         fixed_aprad, source_tolerance, solar)
+                         fixed_aprad, source_tolerance, solar,
+                         rerun_registration, asteroids)
         pass

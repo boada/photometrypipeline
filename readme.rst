@@ -1,7 +1,7 @@
 Photometry Pipeline 
 ===================
 
-The Photometry Pipeline (PP) is a Python software package for
+The Photometry Pipeline (PP) is a Python 3 software package for
 automated photometric analysis of imaging data from small to
 medium-sized observatories. It uses `Source Extractor`_ and `SCAMP`_ to
 register and photometrically calibrate images based on catalogs that
@@ -23,12 +23,12 @@ Python modules:
   * `numpy`_
   * `scipy`_
   * `astropy`_
-  * `astroquery`_
+  * `astroquery`_ (version >= 0.3.9)
   * `matplotlib`_
-  * `callhorizons`_
   * `future`_
-  * `pillow`_
-    
+  * `skimage`_
+  * `pandas`_
+  
 and some freely available software:
 
   * `Source Extractor`_
@@ -50,6 +50,13 @@ Documentation
 -------------
 
 See the documentation for more information: `documentation`_
+
+
+User Group
+----------
+
+If you want to stay up-to-date on PP changes, feel free to sign up for the `photometrypipeline users' group`_.
+
 
 
 Acknowledgments
@@ -81,12 +88,13 @@ Feel free to contact me in case of questions or suggestions: mommermiscience (at
 .. _astropy: http://www.astropy.org/
 .. _astroquery: http://github.com/astropy/astroquery
 .. _matplotlib: http://matplotlib.org/
-.. _callhorizons: http://pypi.python.org/pypi/CALLHORIZONS
 .. _future: http://python-future.org/
-.. _pillow: http://python-pillow.org/
+.. _skimage: https://scikit-image.org/
+.. _pandas: http://pandas.pydata.org/
 .. _Source Extractor: http://www.astromatic.net/software/sextractor
 .. _SCAMP: http://www.astromatic.net/software/scamp
 .. _documentation: http://photometrypipeline.readthedocs.io/en/latest/
 .. _this document: http://photometrypipeline.readthedocs.io/en/latest/supported.html
 .. _Astronomy & Computing: http://www.sciencedirect.com/science/article/pii/S2213133716300816
 .. _MANOS: http://manosobs.wordpress.com/
+.. _photometrypipeline users' group: https://groups.google.com/d/forum/photometrypipeline_users

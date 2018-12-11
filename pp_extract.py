@@ -31,10 +31,7 @@ import subprocess
 import logging
 import argparse
 import shlex
-import time
-import datetime
 from multiprocessing import Pool
-import logging
 from astropy.io import fits
 
 # only import if Python3 is used
@@ -130,6 +127,9 @@ def extract_singleframe(data):
         if param['ignore_saturation']:
             optionstring += ' -SATUR_LEVEL 1000000'
             optionstring += ' -SATUR_KEY NOPE'
+
+    if 'nodeblending' in param and param['nodeblending']:
+        optionstring += ' -DEBLEND_MINCONT 1 '
 
     commandline = '%s -c %s %s %s' % \
                   (sextractor_cmd,
@@ -317,6 +317,9 @@ if __name__ == '__main__':
                         default=None)
     parser.add_argument('-ignore_saturation', help='keep saturated sources',
                         action="store_true")
+    parser.add_argument('-nodeblending',
+                        help='deactivate deblending in source extraction',
+                        action="store_true")
     parser.add_argument('-quiet', help='no logging',
                         action="store_true")
     parser.add_argument('images', help='images to process', nargs='+')
@@ -328,13 +331,15 @@ if __name__ == '__main__':
     aprad = args.aprad
     telescope = args.telescope
     ignore_saturation = args.ignore_saturation
+    nodeblending = args.nodeblending
     quiet = args.quiet
     filenames = args.images
 
     # prepare parameter dictionary
     parameters = {'sex_snr': sex_snr, 'source_minarea': source_minarea,
                   'aprad': aprad, 'telescope': telescope,
-                  'ignore_saturation': ignore_saturation, 'quiet': quiet}
+                  'ignore_saturation': ignore_saturation,
+                  'nodeblending': nodeblending, 'quiet': quiet}
 
     if paramfile is not None:
         parameters['paramfile'] = paramfile

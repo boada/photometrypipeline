@@ -1,7 +1,16 @@
 Changelog
 =========
 
-Major changes to the pipeline since 2016-10-01 (see `Mommert 2017`_) are documented here.
+Major changes to the pipeline since 2016-10-01 (see `Mommert 2017`_) are
+documented here.
+
+* 2018-12-02: major overhaul of diagnostic output
+
+* 2018-11-23: implementation of ``pp_setup.py``, which will eventually
+  replace ``_pp_conf.py``; photometric catalog data used in the photometric
+  calibration can now by output as ascii table and/or into final .db file;
+  ``pillow`` has been replaced by ``skimage``; ``pandas`` is now a required
+  Python module
 
 * 2017-11-24: implementation of `-solar` option in ``pp_run`` and
   ``pp_calibrate`` to obtain photometric calibration only from stars

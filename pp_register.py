@@ -39,7 +39,7 @@ import _pp_conf
 from catalog import *
 import pp_extract
 import toolbox
-import diagnostics as diag
+from diagnostics import registration as diag
 
 # only import if Python3 is used
 if sys.version_info > (3, 0):
@@ -53,8 +53,8 @@ logging.basicConfig(filename=_pp_conf.log_filename,
 
 
 def register(filenames, telescope, sex_snr, source_minarea, aprad,
-             mancat, obsparam, source_tolerance, display=False,
-             diagnostics=False):
+             mancat, obsparam, source_tolerance, nodeblending,
+             display=False, diagnostics=False):
     """
     registration wrapper
     output: diagnostic properties
@@ -86,6 +86,8 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
 
     n_success_last_iteration = None
 
+    goodfits, badfits = [], []
+
     for cat_idx, refcat in enumerate(obsparam['astrometry_catalogs']):
 
         # run extract routines
@@ -99,6 +101,7 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
                              'aprad': aprad, 'telescope': telescope,
                              'ignore_saturation': True,
                              'global_background': False,
+                             'nodeblending': nodeblending,
                              'quiet': False}
 
         extraction = pp_extract.extract_multiframe(filenames,
@@ -131,7 +134,6 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
             return {'goodfits': [], 'badfits': filenames}
 
         output = {}
-        fileline = " ".join(ldac_files)
 
         # check if sufficient reference stars are available in refcat
         logging.info('check if sufficient reference stars in catalog %s' %
@@ -140,9 +142,54 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
         hdulist = fits.open(filenames[len(filenames)//2],
                             ignore_missing_end=True)
 
+        # get extent on the sky for a single frame
         ra, dec, rad = toolbox.skycenter(ldac_catalogs)
-        logging.info('FoV center (%.7f/%+.7f) and radius (%.2f deg) derived' %
-                     (ra, dec, rad))
+        logging.info(('FoV center ({:.7f}/{:+.7f}) and '
+                      'radius ({:.2f} deg) derived').format(
+                          ra, dec, rad))
+
+        if rad > 5:  # check if combined field radius >5 deg
+            logging.warning(('combined field radius is huge ({:.1f} deg);'
+                             'check if one or more frames can be rejected '
+                             'as outliers.').format(rad))
+
+            # derived center of mass
+            com_ra = np.median(np.hstack([cat['ra_deg']
+                                          for cat in ldac_catalogs]))
+            com_dec = np.median(np.hstack([cat['dec_deg']
+                                           for cat in ldac_catalogs]))
+
+            # for each frame derive distance from center of mass
+            dist = np.array([np.median(np.sqrt((cat['ra_deg']-com_ra)**2 +
+                                               (cat['dec_deg']-com_dec)**2))
+                             for cat in ldac_catalogs])
+
+            logging.warning(('reject files [{:s}] for registration '
+                             'due to large offset from other '
+                             'frames [{:s}]').format(
+                ",".join(np.array(filenames)[dist > 5]),
+                ",".join([str(d) for d in dist[dist > 5]])))
+            if display:
+                print(('reject files [{:s}] for registration '
+                       'due to large offset from other '
+                       'frames [{:s}] deg').format(
+                    ",".join(np.array(filenames)[dist > 5]),
+                    ",".join([str(d) for d in dist[dist > 5]])))
+
+            badfits += list(np.array(filenames)[dist > 5])
+
+            # reject files for which dist>threshold
+            filenames = np.array(filenames)[dist < 5]
+            ldac_files = np.array(ldac_files)[dist < 5]
+            ldac_catalogs = np.array(ldac_catalogs)[dist < 5]
+
+            ra, dec, rad = toolbox.skycenter(ldac_catalogs)
+            logging.info(('FoV center ({:.7f}/{:+.7f}) and '
+                          'radius ({:.2f} deg) derived').format(
+                              ra, dec, rad))
+
+        fileline = " ".join(ldac_files)
+
         del(ldac_catalogs)
 
         checkrefcat = catalog(refcat, display=False)
@@ -187,9 +234,9 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
 
         # assemble arguments for scamp, run it, and wait for it
         commandline = 'scamp -c '+obsparam['scamp-config-file'] + \
-                      ' -ASTR_FLAGSMASK '+st_code+' -FLAGS_MASK '+st_code + \
-                      ' -ASTREF_CATALOG FILE' + \
-                      ' -ASTREFCAT_NAME ' + refcat + '.cat ' + fileline
+            ' -ASTR_FLAGSMASK '+st_code+' -FLAGS_MASK '+st_code + \
+            ' -ASTREF_CATALOG FILE' + \
+            ' -ASTREFCAT_NAME ' + refcat + '.cat ' + fileline
 
         logging.info('call Scamp as: %s' % commandline)
 
@@ -200,7 +247,6 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
         # the contrast values provided by SCAMP
         scamp = _pp_conf.read_scamp_output()
         os.rename('scamp_output.xml', 'astrometry_scamp.xml')
-        goodfits, badfits = [], []
         fitresults = []  # store scamp outputs
         for dat in scamp[1]:
             # successful fit
@@ -354,6 +400,9 @@ def register(filenames, telescope, sex_snr, source_minarea, aprad,
 
     # create diagnostics
     if diagnostics:
+        if display:
+            print('creating diagnostic output')
+        logging.info(' ~~~~~~~~~ creating diagnostic output')
         diag.add_registration(output, extraction)
 
     logging.info('Done! -----------------------------------------------------')
@@ -374,6 +423,9 @@ if __name__ == '__main__':
                         default=None)
     parser.add_argument("-cat", help='manually select reference catalog',
                         choices=_pp_conf.allcatalogs, default=None)
+    parser.add_argument('-nodeblending',
+                        help='deactivate deblending in source extraction',
+                        action="store_true")
     parser.add_argument('images', help='images to process', nargs='+')
 
     args = parser.parse_args()
@@ -381,6 +433,7 @@ if __name__ == '__main__':
     source_minarea = float(args.minarea)
     mancat = args.cat
     source_tolerance = args.source_tolerance
+    nodeblending = args.nodeblending
     filenames = args.images
 
     # read telescope and filter information from fits headers
@@ -418,5 +471,5 @@ if __name__ == '__main__':
     # run registration wrapper
     registration = register(filenames, telescope, snr,
                             source_minarea, aprad, mancat, obsparam,
-                            source_tolerance,
+                            source_tolerance, nodeblending,
                             display=True, diagnostics=True)

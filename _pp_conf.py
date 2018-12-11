@@ -23,37 +23,57 @@ except ImportError:
     print('Module numpy not found. Please install with: pip install numpy')
     sys.exit()
 
+try:
+    from astroquery.jplhorizons import Horizons
+except ImportError:
+    print('Module astroquery not found. Please install with: pip install '
+          'astroquery')
+    sys.exit()
+
+try:
+    from pandas import read_sql
+except ImportError:
+    print('Module pandas not found. Please install with: pip install '
+          'pandas')
+    sys.exit()
+
+
 # import pipeline-specific modules
 from toolbox import *
 
 # only import if Python3 is used
 if sys.version_info > (3, 0):
     from past.builtins import execfile
+else:
+    raise RuntimeError(
+        'This is 2018. You should really be using Python 3 by now. '
+        'PP now has only limited support for Python 2.7. Please '
+        'install Python 3 (preferentially through Anaconda).')
 
 
-def setup_diagnostics():
-    """
-    This function sets the current data and diagnostics root
-    directories. The setup can and should be re-run in the current working
-    directory
-    """
+# def setup_diagnostics():
+#     """
+#     This function sets the current data and diagnostics root
+#     directories. The setup can and should be re-run in the current working
+#     directory
+#     """
 
-    # set up data and diagnostics directories
-    dataroot = os.getcwd() + '/'
-    diagroot = dataroot + '.diagnostics/'
+#     # set up data and diagnostics directories
+#     dataroot = os.getcwd() + '/'
+#     diagroot = dataroot + '.diagnostics/'
 
-    # create diagnostics directory
-    if not os.path.exists(diagroot):
-        os.mkdir(diagroot)
+#     # create diagnostics directory
+#     if not os.path.exists(diagroot):
+#         os.mkdir(diagroot)
 
-    # define diagnostic website filenames
-    index_filename = 'diagnostics.html'
-    reg_filename = '.diagnostics/' + 'registration.html'
-    cal_filename = '.diagnostics/' + 'calibration.html'
-    res_filename = '.diagnostics/' + 'results.html'
+#     # define diagnostic website filenames
+#     index_filename = 'diagnostics.html'
+#     reg_filename = '.diagnostics/' + 'registration.html'
+#     cal_filename = '.diagnostics/' + 'calibration.html'
+#     res_filename = '.diagnostics/' + 'results.html'
 
-    return (dataroot, diagroot, index_filename,
-            reg_filename, cal_filename, res_filename)
+#     return (dataroot, diagroot, index_filename,
+#             reg_filename, cal_filename, res_filename)
 
 
 # suppress runtime and astropy warnings
@@ -81,7 +101,7 @@ if rootpath is None:
 
 # potential FITS header keywords for looking up the instrument
 # any unique header keyword works as a potential identifier
-instrument_keys = ['INSTRUME', 'LCAMMOD', 'FPA', 'CAM_NAME']
+instrument_keys = ['PPINSTRU', 'LCAMMOD', 'FPA', 'CAM_NAME', 'INSTRUME']
 
 execfile(rootpath+'/setup/telescopes.py')
 
@@ -96,14 +116,14 @@ use_diagnostics_summary = False
 # pp_run process to report into a summary html catalog
 
 # setting up directory paths and logging file
-dataroot, diagroot, index_filename, \
-    reg_filename, cal_filename, res_filename = setup_diagnostics()
+#dataroot, diagroot, index_filename, \
+#    reg_filename, cal_filename, res_filename = setup_diagnostics()
 
 # logging setup
 log_formatline = '%(filename)s: %(message)s [%(asctime)s]'
 log_level = logging.DEBUG
 log_datefmt = '%m/%d/%Y %H:%M:%S'
-log_filename = diagroot+'LOG'
+log_filename = 'LOG'
 
 # start pp_process_idx counter (if using 'pp_run all')
 pp_process_idx = 0

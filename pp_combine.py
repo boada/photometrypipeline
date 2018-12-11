@@ -27,7 +27,6 @@ import numpy
 import os
 import sys
 import shutil
-import callhorizons
 import logging
 import subprocess
 import argparse
@@ -35,6 +34,7 @@ import shlex
 import time
 from astropy.io import fits
 from past.utils import old_div
+from astroquery.jplhorizons import Horizons
 
 # pipeline-specific modules
 import _pp_conf
@@ -142,10 +142,11 @@ def combine(filenames, obsparam, comoving, targetname,
             # use ephemerides from Horizons if no manual rates are provided
             if manual_rates is None:
                 # call HORIZONS to get target coordinates
-                eph = callhorizons.query(targetname.replace('_', ' '))
-                eph.set_discreteepochs(date)
+                obj = Horizons(targetname.replace('_', ' '), epochs=date,
+                               location=str(obsparam['observatory_code']))
                 try:
-                    n = eph.get_ephemerides(str(obsparam['observatory_code']))
+                    eph = obj.ephemerides()
+                    n = len(eph)
                 except ValueError:
                     print('Target (%s) not an asteroid' % targetname)
                     logging.warning('Target (%s) not an asteroid' % targetname)
@@ -160,7 +161,7 @@ def combine(filenames, obsparam, comoving, targetname,
                     logging.info('ephemerides for %s pulled from Horizons' %
                                  targetname)
                     logging.info('Horizons call: %s' %
-                                 eph.query)
+                                 obj.uri)
 
                     target_ra, target_dec = eph[0]['RA'], eph[0]['DEC']
 

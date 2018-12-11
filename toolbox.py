@@ -195,7 +195,7 @@ def get_binning(header, obsparam):
     return (binning_x, binning_y)
 
 
-def skycenter(catalogs, ra_key='ra.deg', dec_key='dec.deg'):
+def skycenter(catalogs, ra_key='ra_deg', dec_key='dec_deg'):
     """derive center position and radius from catalogs"""
     from astropy.coordinates import SkyCoord
     from astropy import units as u

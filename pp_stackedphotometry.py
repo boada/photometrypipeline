@@ -299,7 +299,7 @@ if __name__ == '__main__':
     os.chdir(rootdir)
 
     logging.info('move comove/photometry*.dat to root directory')
-    targets = numpy.array(list(distillate['targetnames'].keys()))
+    targets = np.array(list(distillate['targetnames'].keys()))
     target = targets[targets != 'control_star'][0]
     shutil.copyfile(('comove/photometry_%s.dat' %
                      target.translate(_pp_conf.target2filename)),

@@ -18,18 +18,18 @@ directory.
 Software Requirements
 .....................
 
-PP requires `git`_ for the installation, a number of non-standard
-Python modules (either Python2 or Python3; available from the `Python
+PP only runs on Python 3. It furthermore requires requires `git`_, a
+number of non-standard Python modules (available from the `Python
 Package Index`_ through `pip`_):
 
 * `numpy`_
 * `scipy`_
 * `astropy`_
-* `astroquery`_
+* `astroquery`_ (version >= 0.3.9)
 * `matplotlib`_
-* `callhorizons`_
-* `future`_ 
-* `pillow`_
+* `future`_    
+* `skimage`_
+* `pandas`_
   
 and some freely available software:
 
@@ -81,7 +81,7 @@ Unpack SCAMP and install using::
 
 Install Python modules::
 
-  pip install numpy scipy astropy astroquery matplotlib matplotlib callhorizons future pillow
+  pip install --upgrade --user numpy scipy astropy astroquery matplotlib pandas
 
 Add these lines to the ``.bashrc`` file in your home directory and
 replace ``<path>`` with the actual path to the PP directory::
@@ -120,8 +120,8 @@ Update pip::
 
 Install extra python modules in Anaconda::
 
-  pip install –-user numpy scipy matplotlib callhorizons future astroquery Pillow==2.6.1
-  pip install astropy
+  pip install --upgrade –-user numpy scipy astropy astroquery matplotlib
+  pip install astropy pandas
   conda update astropy
 
 Install SExtractor::
@@ -249,12 +249,12 @@ and I will take care of implementing your telescope.
 .. _astropy: http://www.astropy.org/
 .. _astroquery: https://github.com/astropy/astroquery
 .. _matplotlib: http://matplotlib.org/
-.. _callhorizons: https://pypi.python.org/pypi/CALLHORIZONS
 .. _future: http://python-future.org/
-.. _pillow: http://python-pillow.org/
+.. _skimage: https://scikit-image.org/
 .. _imagemagick: http://www.imagemagick.org/
 .. _Source Extractor: http://www.astromatic.net/software/sextractor
 .. _SCAMP: http://www.astromatic.net/software/scamp
 .. _latest development version: http://www.astromatic.net/wsvn/public/dl.php?repname=public+software.scamp&path=%2Ftrunk%2F&rev=0&isdir=1
 .. _towicode: https://github.com/towicode
 .. _mytelescopes.py: http://134.114.60.45/photometrypipeline/mytelescopes.py
+.. _pandas: http://pandas.pydata.org/

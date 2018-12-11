@@ -3,9 +3,6 @@
 """ PP_PREPARE - prepare fits images for photometry pipeline
     v1.0: 2016-02-27, mommermiscience@gmail.com
 """
-from __future__ import print_function
-from __future__ import division
-
 # Photometry Pipeline
 # Copyright (C) 2016-2018  Michael Mommert, mommermiscience@gmail.com
 
@@ -23,8 +20,6 @@ from __future__ import division
 # along with this program.  If not, see
 # <http://www.gnu.org/licenses/>.
 
-
-from past.utils import old_div
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import FK5, ICRS
@@ -35,18 +30,12 @@ import re
 import sys
 import logging
 import argparse
-# try:
-#    import callhorizons
-# except ImportError:
-#    print('Module callhorizons not found. Please install with: pip install '
-#          'callhorizons')
-#    sys.exit()
 from astropy.io import fits
 
 # pipeline-specific modules
 import _pp_conf
 from catalog import *
-import diagnostics as diag
+from diagnostics import preparation as diag
 import toolbox
 
 # only import if Python3 is used
@@ -324,39 +313,6 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         elif len(header['OBJECT'].strip()) == 0:
             header['OBJECT'] = 'None'
 
-        # # check if RA, Dec, airmass headers are available;
-        # #   else: query horizons
-        # # to get approximate information
-        # if (obsparam['ra'] not in header or
-        #     obsparam['dec'] not in header or
-        #     obsparam['airmass'] not in header):
-
-        #     logging.info('Either RA, Dec, or airmass missing from image ' +
-        #                  'header; pull approximate information for Horizons')
-
-        #     # obtain approximate ra and dec (and airmass) from JPL Horizons
-        #     eph = callhorizons.query(header[obsparam['object']].
-        #                              replace('_', ' '))
-        #     eph.set_discreteepochs(header['MIDTIMJD'])
-        #     try:
-        #         n = eph.get_ephemerides(obsparam['observatory_code'])
-        #     except ValueError:
-        #         logging.warning('Target (%s) is not an asteroid' %
-        #                         header[obsparam['object']])
-        #         n = None
-
-        #     if n is None:
-        #         raise KeyError((('%s is not an asteroid known '
-        #                          'to JPL Horizons') %
-        #                          header[obsparam['object']]))
-
-        #     header[obsparam['ra']] = (eph['RA'][0],
-        #                               'PP: queried from Horizons')
-        #     header[obsparam['dec']] = (eph['DEC'][0],
-        #                                'PP: queried from Horizons')
-        #     header[obsparam['airmass']] = (eph['airmass'][0],
-        #                                    'PP: queried from Horizons')
-
         # add fake wcs information that is necessary to run SCAMP
 
         # read out ra and dec from header
@@ -369,11 +325,11 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
             dec_string = header[obsparam['dec']].split(
                 obsparam['radec_separator'])
             ra_deg = 15.*(float(ra_string[0]) +
-                          old_div(float(ra_string[1]), 60.) +
-                          old_div(float(ra_string[2]), 3600.))
+                          float(ra_string[1]) / 60. +
+                          float(ra_string[2]) / 3600.)
             dec_deg = (abs(float(dec_string[0])) +
-                       old_div(float(dec_string[1]), 60.) +
-                       old_div(float(dec_string[2]), 3600.))
+                       float(dec_string[1]) / 60. +
+                       float(dec_string[2]) / 3600.)
             if dec_string[0].find('-') > -1:
                 dec_deg = -1 * dec_deg
 
@@ -398,9 +354,9 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         if obsparam['telescope_keyword'] == 'UKIRTWFCAM':
             try:
                 ra_deg = (float(header['TELRA'])/24.*360. -
-                          old_div(float(header['JITTER_X']), 3600.))
+                          float(header['JITTER_X'])/3600)
                 dec_deg = (float(header['TELDEC']) -
-                           old_div(float(header['JITTER_Y']), 3600.))
+                           float(header['JITTER_Y'])/3600)
             except KeyError:
                 # JITTER keywords not in combined images
                 pass
@@ -430,12 +386,10 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                                 'PP: fake Coordinate reference value')
             header['CRVAL2'] = (dec_deg+dec_offset,
                                 'PP: fake Coordinate reference value')
-            header['CRPIX1'] = (int(old_div(
-                float(header[obsparam['extent'][0]]), 2)),
-                'PP: fake Coordinate reference pixel')
-            header['CRPIX2'] = (int(old_div(
-                float(header[obsparam['extent'][1]]), 2)),
-                'PP: fake Coordinate reference pixel')
+            header['CRPIX1'] = (int(float(header[obsparam['extent'][0]])/2),
+                                'PP: fake Coordinate reference pixel')
+            header['CRPIX2'] = (int(float(header[obsparam['extent'][1]])/2),
+                                'PP: fake Coordinate reference pixel')
 
             # plugin default distortion parameters, if available
             if 'distort' in obsparam:
@@ -482,7 +436,10 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
 
     # create diagnostics
     if diagnostics:
-        diag.create_index(filenames, os.getcwd(), obsparam, display)
+        if display:
+            print('creating diagnostic output')
+        logging.info(' ~~~~~~~~~ creating diagnostic output')
+        diag.add_index(filenames, os.getcwd(), obsparam)
 
     logging.info('Done! -----------------------------------------------------')
 
@@ -541,7 +498,8 @@ if __name__ == '__main__':
         for key in _pp_conf.instrument_keys:
             if key in header:
                 instruments.append(header[key])
-        hdulist.close()
+                break
+            hdulist.close()
 
     if telescope is None:
         try:
