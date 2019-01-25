@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ PP_PHOTOMETRY - run curve-of-growth analysis on image files,
                     identify optimum aperture radius, and redo photometry

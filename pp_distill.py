@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ PP_DISTILL - distill calibrated image databases into one database
                  of select moving or fixed sources
@@ -330,7 +330,7 @@ def serendipitous_variablestars(catalogs, display=True):
                   + 'a %.2f deg radius') %
                  (ra_deg, dec_deg, rad_deg))
 
-    field = coord.SkyCoord(ra=ra_deg, dec=dec_deg, unit=(u.dec, u.dec),
+    field = coord.SkyCoord(ra=ra_deg, dec=dec_deg, unit=(u.deg, u.deg),
                            frame='icrs')
 
     vquery = Vizier(columns=['Name', 'RAJ2000', 'DEJ2000'])
@@ -568,8 +568,17 @@ def distill(catalogs, man_targetname, offset, fixed_targets_file, posfile,
             for key in cat.fields:
                 if filtername+'mag' in key:
                     mag_keys.append(key)
+        # if both catalog magnitudes and transformated magnitudes in mag_keys
+        # use the transformed ones (the target is most probably not in the
+        # catalog used for photometric calibration)
+        fixed_mag_keys = []
+        for band in mag_keys:
+            if '_'+band in mag_keys:
+                continue
+            else:
+                fixed_mag_keys.append(band)
+        mag_keys = fixed_mag_keys
 
-        # build field lists for observed catalogs
         match_keys_other_catalog, extract_other_catalog = [], []
 
         for key in ['ra_deg', 'dec_deg', 'XWIN_IMAGE', 'YWIN_IMAGE',
@@ -635,7 +644,7 @@ def distill(catalogs, man_targetname, offset, fixed_targets_file, posfile,
                    'mag    sig     source_ra    source_dec   [1]   [2]   ' +
                    '[3]   [4]    [5]       ZP ZP_sig inst_mag ' +
                    'in_sig               [6] [7] [8]    [9]          [10] ' +
-                   'FWHM" APRAD"\n')
+                   'FWHM"\n')
 
         for dat in data:
             # sort measured magnitudes by target

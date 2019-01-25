@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ PP_CALIBRATE - match image databases against photometry catalogs
                    and derive magnitude zeropoint

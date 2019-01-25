@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ PPTOOL_MPCREPORT - produce a file for submission of asteroid astrometry
                        to the Minor Planet center

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ PP_PREPARE - prepare fits images for photometry pipeline
     v1.0: 2016-02-27, mommermiscience@gmail.com

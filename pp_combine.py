@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ PP_COMBINE - combine frames based on wcs 
     v1.0: 2017-10-03, mommermiscience@gmail.com

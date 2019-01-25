@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ PP_REGISTER - wcs register frames
     v1.0: 2015-12-30, mommermiscience@gmail.com

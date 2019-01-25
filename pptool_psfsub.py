@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ PPTOOL_PSFSUB - PSF subtraction tool
     v1.0: 2017-12-10, mommermiscience@gmail.com

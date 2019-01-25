@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ MANIDENT - manual target identification tool for the Photometry Pipeline
 

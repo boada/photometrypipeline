@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ PP_EXTRACT - identify field sources using Source Extractor with
     multi-threading capabilities

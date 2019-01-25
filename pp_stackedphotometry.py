@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ PP_STACKEDPHOTOMETRY - wrapper to perform photometry on stacked images
     v1.0: 2017-10-19, mommermiscience@gmail.com
