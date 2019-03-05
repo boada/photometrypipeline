@@ -202,8 +202,6 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         # add header keywords for Source Extractor
         if 'EPOCH' not in header:
             header['EPOCH'] = (2000, 'PP: required for registration')
-        # if 'EQUINOX' not in header:
-        #     header['EQUINOX'] = (2000, 'PP: required for registration')
 
         # add header keywords for SCAMP
         header['PHOTFLAG'] = ('F', 'PP: data is not photometric (SCAMP)')
@@ -220,20 +218,22 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                         header.remove(key)
                 elif 'PV' in key and '_' in key:
                     header.remove(key)
-                elif key in ['CTYPE1', 'CRPIX1', 'CRVAL1', 'CROTA1',
-                             'CROTA2', 'CFINT1', 'CTYPE2', 'CRPIX2',
-                             'CRVAL2', 'CFINT2', 'LTM1_1', 'LTM2_2',
-                             'WAT0_001', 'LTV1', 'LTV2', 'PIXXMIT',
-                             'PIXOFFST', 'PC1_1', 'PC1_2', 'PC2_1', 'PC2_2',
-                             #'CUNIT1', 'CUNIT2',
-                             'A_ORDER', 'A_0_0',
-                             'A_0_1', 'A_0_2', 'A_1_0', 'A_1_1', 'A_2_0',
-                             'B_ORDER', 'B_0_0', 'B_0_1', 'B_0_2', 'B_1_0',
-                             'B_1_1', 'B_2_0', 'AP_ORDER', 'AP_0_0',
-                             'AP_0_1', 'AP_0_2', 'AP_1_0', 'AP_1_1',
-                             'AP_2_0', 'BP_ORDER', 'BP_0_0', 'BP_0_1',
-                             'BP_0_2', 'BP_1_0', 'BP_1_1', 'BP_2_0',
-                             'CDELT1', 'CDELT2', 'CRDELT1', 'CRDELT2']:
+                elif key in (['CTYPE1', 'CRPIX1', 'CRVAL1', 'CROTA1',
+                              'CROTA2', 'CFINT1', 'CTYPE2', 'CRPIX2',
+                              'CRVAL2', 'CFINT2', 'LTM1_1', 'LTM2_2',
+                              'WAT0_001', 'LTV1', 'LTV2', 'PIXXMIT',
+                              'PIXOFFST', 'PC1_1', 'PC1_2', 'PC2_1', 'PC2_2',
+                              'A_ORDER', 'A_0_0',
+                              'A_0_1', 'A_0_2', 'A_1_0', 'A_1_1', 'A_2_0',
+                              'B_ORDER', 'B_0_0', 'B_0_1', 'B_0_2', 'B_1_0',
+                              'B_1_1', 'B_2_0', 'AP_ORDER', 'AP_0_0',
+                              'AP_0_1', 'AP_0_2', 'AP_1_0', 'AP_1_1',
+                              'AP_2_0', 'BP_ORDER', 'BP_0_0', 'BP_0_1',
+                              'BP_0_2', 'BP_1_0', 'BP_1_1', 'BP_2_0',
+                              'CDELT1', 'CDELT2', 'CRDELT1', 'CRDELT2'] +
+                             ['TR{}_{}'.format(i, j)
+                              for i in range(1, 3)
+                              for j in range(15)]):
                     if not toolbox.if_val_in_dict(key, obsparam):
                         header.remove(key)
 
@@ -297,7 +297,7 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
             logging.warning('cannot translate filter keyword \"' +
                             header[obsparam['filter']] +
                             '\"')
-            #header[obsparam['filter']] = 'clear'
+            # header[obsparam['filter']] = 'clear'
         header['FILTER'] = (header[obsparam['filter']], 'PP:copied')
 
         # perform header update
@@ -345,6 +345,8 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                 ra_deg = coo.ra.deg
                 dec_deg = coo.dec.deg
                 header['EQUINOX'] = (2000.0, 'PP: normalized to ICRS')
+        else:
+            header['EQUINOX'] = (2000, 'added by PP')
 
         if man_ra is not None and man_dec is not None:
             ra_deg = float(man_ra)

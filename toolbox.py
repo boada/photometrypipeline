@@ -30,7 +30,7 @@ except ImportError:
     sys.exit()
 
 import math
-import numpy
+import numpy as np
 
 # only import if Python3 is used
 if sys.version_info > (3, 0):
@@ -130,10 +130,10 @@ def read_scamp_output():
             this_data = []
         # flush data line
         if read_this and raw[idx].find('</TR>') > -1:
-            data.append(numpy.hstack(this_data))
+            data.append(np.hstack(this_data))
         # actually read data line
         if read_this and raw[idx].find('<TD>') > -1:
-            line = raw[idx].replace('/', '').split('<TD>')
+            line = raw[idx].replace('</TD>', '<TD>').split('<TD>')
             for item in line:
                 if len(item.strip()) > 0 and item.find('\n') == -1:
                     this_data.append(item)
@@ -148,7 +148,6 @@ def read_scamp_output():
         idx += 1
 
     # check if data rows have same length as header
-    abort = False
     for i in range(len(data)):
         if len(headers) != len(data[i]):
             raise (RuntimeError,
@@ -202,16 +201,19 @@ def skycenter(catalogs, ra_key='ra_deg', dec_key='dec_deg'):
 
     # using percentiles instead of min/max to get better handle
     # on outliers
-    min_ra = min([numpy.percentile(cat[ra_key], 1)
+    min_ra = min([np.percentile(cat[ra_key], 1)
                   for cat in catalogs])
-    max_ra = max([numpy.percentile(cat[ra_key], 99)
+    max_ra = max([np.percentile(cat[ra_key], 99)
                   for cat in catalogs])
-    min_dec = min([numpy.percentile(cat[dec_key], 1)
+    min_dec = min([np.percentile(cat[dec_key], 1)
                    for cat in catalogs])
-    max_dec = max([numpy.percentile(cat[dec_key], 99)
+    max_dec = max([np.percentile(cat[dec_key], 99)
                    for cat in catalogs])
 
-    ra, dec = (max_ra+min_ra)/2, (max_dec+min_dec)/2
+    ra, dec = (np.rad2deg(np.angle(np.exp(1j*np.deg2rad(min_ra)) +
+                                   np.exp(1j*np.deg2rad(max_ra)))),
+               np.rad2deg(np.angle(np.exp(1j*np.deg2rad(min_dec)) +
+                                   np.exp(1j*np.deg2rad(max_dec)))))
 
     lower_left = SkyCoord(ra=min_ra, dec=min_dec, frame='icrs', unit='deg')
     upper_right = SkyCoord(ra=max_ra, dec=max_dec, frame='icrs', unit='deg')

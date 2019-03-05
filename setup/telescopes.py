@@ -53,7 +53,8 @@ vatt4k_param = {
     'object': 'OBJECT',  # object name keyword
     'filter': 'FILTER',  # filter keyword
     'filter_translations': {'TOP 2 BOT 1': 'V', 'TOP 3 BOT 1': 'R',
-                            'TOP 4 BOT 1': 'I', 'TOP 5 BOT 1': 'B'},
+                            'TOP 4 BOT 1': 'I', 'TOP 5 BOT 1': 'B',
+                            'TOP 1 BOT 1': None},
     # filtername translation dictionary
     'exptime': 'EXPTIME',  # exposure time keyword (s)
     'airmass': 'AIRMASS',  # airmass keyword
@@ -288,10 +289,11 @@ arc35agile_param = {
     'photometry_catalogs': ['SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
 }
 
-# Magellan, IMACS
-magimacs_param = {
-    'telescope_instrument': 'Magellan/IMACS',  # telescope/instrument name
-    'telescope_keyword': 'MAGIMACS',   # telescope/instrument keyword
+
+# Magellan, IMACS long camera
+magimacsl_param = {
+    'telescope_instrument': 'Magellan/IMACS long',  # telescope/instrument name
+    'telescope_keyword': 'MAGIMACSL',   # telescope/instrument keyword
     'observatory_code': '269',         # MPC observatory code
     'secpix': (0.11, 0.11),  # pixel size (arcsec)
     # before binning
@@ -366,6 +368,88 @@ magimacs_param = {
     'astrometry_catalogs': ['GAIA'],
     'photometry_catalogs': ['SDSS-R9', 'PANSTARRS', 'SkyMapper', 'APASS9', '2MASS']
 }
+
+# Magellan, IMACS short camera
+magimacss_param = {
+    'telescope_instrument': 'Magellan/IMACS short',  # telescope/instrument name
+    'telescope_keyword': 'MAGIMACSS',   # telescope/instrument keyword
+    'observatory_code': '269',         # MPC observatory code
+    'secpix': (0.2, 0.2),  # pixel size (arcsec)
+    # before binning
+    'ext_coeff': 0.05,          # typical extinction coefficient
+
+
+    # image orientation preferences (for each chip)
+    'chip_id': 'CHIP',        # chip identifier (remove,
+    # if not existent)
+    # the following keys are dictionaries if 'chip_id' exists, single
+    # values otherwise
+    'flipx': {1: True, 2: False, 3: True, 4: True, 5: True, 6: True,
+                              7: True, 8: True},
+    'flipy': {1: False, 2: False, 3: False, 4: False, 5: False,
+              6: False, 7: False, 8: False},
+    'rotate': {1: 270, 2: 270, 3: 270, 4: 270, 5: 90, 6: 90,
+               7: 90, 8: 90},
+    'chip_offset_fixed': {1: (None, None), 2: (-0.11, 0.06),
+                          3: (None, None),  4: (None, None),
+                          5: (None, None),  6: (None, None),
+                          7: (None, None),   8: (None, None)},
+    # chip offset (ra, dec in degress) [optional]
+
+    # instrument-specific FITS header keywords
+    'binning': ('BINNING#x1', 'BINNING#x2'),
+    # binning in x/y, '_blankN' denotes that both axes
+    # are listed in one keyword, sep. by blanks
+    'extent': ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra': 'RA',  # telescope pointing, RA
+    'dec': 'DEC',  # telescope pointin, Dec
+    'radec_separator': ':',   # RA/Dec hms separator, use 'XXX'
+    # if already in degrees
+    'date_keyword': 'DATE-OBS|UT-TIME',  # obs date/time
+    # keyword; use
+    # 'date|time' if
+                                         # separate
+    'obsmidtime_jd': 'MIDTIMJD',  # obs midtime jd keyword
+                                         # (usually provided by
+                                         # pp_prepare
+    'object': 'OBJECT',  # object name keyword
+    'filter': 'FILTER',  # filter keyword
+    'filter_translations': {'Sloan_u': 'u', 'Sloan_g': 'g', 'Sloan_r': 'r',
+                            'Sloan_i': 'i', 'Sloan_z': 'z',
+                            'Bessell_V1': 'V', 'WB4800-7800': None},
+    # filtername translation dictionary
+    'exptime': 'EXPTIME',  # exposure time keyword (s)
+    'airmass': 'AIRMASS',  # airmass keyword
+
+
+    # source extractor settings
+    'source_minarea': 10,  # default sextractor source minimum N_pixels
+    'source_snr': 3,  # default sextractor source snr for registration
+    'aprad_default': 8,  # default aperture radius in px
+    'aprad_range': [3, 15],  # [minimum, maximum] aperture radius (px)
+    'sex-config-file': rootpath+'/setup/magimacs.sex',
+    'mask_file': {},
+    #                        mask files as a function of x,y binning
+
+    # registration settings (Scamp)
+    'scamp-config-file': rootpath+'/setup/magimacs.scamp',
+    'reg_max_mag': 21,
+    'reg_search_radius': 0.5,  # deg
+    'source_tolerance': 'high',
+
+    # swarp settings
+    'copy_keywords': ('TELESCOP,INSTRUME,FILTER,EXPTIME,OBJECT,CHIP,EXPTYPE,' +
+                      'DATE-OBS,UT-TIME,BINNING,RA,DEC,AIRMASS,' +
+                      'SECPIX,TEL_KEYW'),
+    #                        keywords to be copied in image
+    #                        combination using swarp
+    'swarp-config-file': rootpath+'/setup/magimacs.swarp',
+
+    # default catalog settings
+    'astrometry_catalogs': ['GAIA'],
+    'photometry_catalogs': ['SDSS-R9', 'PANSTARRS', 'SkyMapper', 'APASS9', '2MASS']
+}
+
 
 # Calar Alto 1.23m, DLR-MKIII
 ca123dlrmkiii_param = {
@@ -3576,12 +3660,78 @@ pds35cmstl1001e_param = {
     'photometry_catalogs': ['PANSTARRS', 'SDSS-R9', 'APASS9']
 }
 
+# MMT, MMTCam
+mmtcam_param = {
+    'telescope_instrument': 'MMT/MMTCam',  # telescope/instrument name
+    'telescope_keyword': 'MMTCAM',      # telescope/instrument keyword
+    'observatory_code': '696',         # MPC observatory code
+    'secpix': (0.082, 0.082),  # pixel size (arcsec)
+    # before binning
+    'ext_coeff': 0.05,          # typical extinction coefficient
+
+
+    # image orientation preferences
+    'flipx': True,
+    'flipy': True,
+    'rotate': 0,
+
+    # instrument-specific FITS header keywords
+    'binning': ('XBINNING', 'YBINNING'),  # binning in x/y
+    'extent': ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra': 'OBJCTRA',  # telescope pointing, RA
+    'dec': 'OBJCTDEC',  # telescope pointin, Dec
+    'radec_separator': ' ',   # RA/Dec hms separator, use 'XXX'
+    # if already in degrees
+    'date_keyword': 'DATE-OBS',  # obs date/time
+    # keyword; use
+    # 'date|time' if
+    # separate
+    'obsmidtime_jd': 'MIDTIMJD',  # obs midtime jd keyword
+    # (usually provided by
+    # pp_prepare
+    'object': 'OBJECT',  # object name keyword
+    'filter': 'FILTER',  # filter keyword
+    'filter_translations': {'g': 'g', 'r': 'r',
+                            'i': 'i'},
+    # filtername translation dictionary
+    'exptime': 'EXPTIME',  # exposure time keyword (s)
+    'airmass': 'AIRMASS',  # airmass keyword
+
+
+    # source extractor settings
+    'source_minarea': 25,  # default sextractor source minimum N_pixels
+    'source_snr': 3,  # default sextractor source snr for registration
+    'aprad_default': 7,  # default aperture radius in px
+    'aprad_range': [3, 20],  # [minimum, maximum] aperture radius (px)
+    'sex-config-file': rootpath+'/setup/mmtcam.sex',
+    'mask_file': {},
+    #                        mask files as a function of x,y binning
+
+    # registration settings (Scamp)
+    'scamp-config-file': rootpath+'/setup/mmtcam.scamp',
+    'reg_max_mag': 25,
+    'reg_search_radius': 0.1,  # deg
+    'source_tolerance': 'high',
+
+    # swarp settings
+    'copy_keywords': ('TELESCOP,INSTRUME,FILTER,EXPTIME,OBJECT,' +
+                      'DATE-OBS,OBJCTRA,OBJCTDEC,SECPIX,AIRMASS,' +
+                      'TEL_KEYW,XBINNING,YBINNING,MIDTIMJD'),
+    #                         keywords to be copied in image
+    #                         combination using swarp
+    'swarp-config-file': rootpath+'/setup/mmtcam.swarp',
+
+    # default catalog settings
+    'astrometry_catalogs': ['GAIA'],
+    'photometry_catalogs': ['PANSTARRS', 'SDSS-R9', 'APASS9']
+}
 
 # access functions for telescope configurations
 
 
 implemented_telescopes = ['VATT4K', 'DCTLMI', 'ARC35ARCTIC',
-                          'ARC35AGILE', 'MAGIMACS', 'LOWELL31', 'LOWELL42',
+                          'ARC35AGILE', 'MAGIMACSL', 'MAGIMACSS',
+                          'LOWELL31', 'LOWELL42',
                           'LOWELL72',
                           'CTIO09',
                           'CTIO10',
@@ -3602,7 +3752,7 @@ implemented_telescopes = ['VATT4K', 'DCTLMI', 'ARC35ARCTIC',
                           'LCOSINFA03', 'LCOSINFA15',
                           'LCOSPECFS01', 'P60OPT', 'P60SEDM', 'GMOSN',
                           'DFOSC', 'LONEOS', 'PDO25CMF63ST8', 'PDO05F81KAF1001E',
-                          'PDS35CMSTL1001E']
+                          'PDS35CMSTL1001E', 'MMTCAM']
 
 # translate INSTRUME (or others, see _pp_conf.py) header keyword into
 # PP telescope keyword
@@ -3611,7 +3761,8 @@ instrument_identifiers = {'= "Vatt4k"':        'VATT4K',
                           'lmi': 'DCTLMI',
                           'arctic':            'ARC35ARCTIC',
                           'agile':             'ARC35AGILE',
-                          'IMACS Long-Camera': 'MAGIMACS',
+                          'IMACS Long-Camera': 'MAGIMACSL',
+                          'IMACS Short-Camera': 'MAGIMACSS',
                           'DLR-MKIII':         'CA123DLRMKIII',
                           'NASAcam':           'LOWELL31',
                           'nasa42':            'LOWELL42',
@@ -3670,14 +3821,15 @@ instrument_identifiers = {'= "Vatt4k"':        'VATT4K',
                           '0.5m f/8.1 Ritchey-Chretien_FLI KAF1001E':
                           'PDO05F81KAF1001E',
                           '0.35-m SCT_STL-1001E': 'PDS35CMSTL1001E',
-                          }
+                          'MMT Rapid Imager': 'MMTCAM'}
 
 # translate telescope keyword into parameter set defined here
 telescope_parameters = {'VATT4K':       vatt4k_param,
                         'DCTLMI':        dctlmi_param,
                         'ARC35ARCTIC':   arc35arctic_param,
                         'ARC35AGILE':    arc35agile_param,
-                        'MAGIMACS':      magimacs_param,
+                        'MAGIMACSL':      magimacsl_param,
+                        'MAGIMACSS':      magimacss_param,
                         'CA123DLRMKIII': ca123dlrmkiii_param,
                         'LOWELL31': lowell31_param,
                         'LOWELL42': lowell42_param,
@@ -3722,6 +3874,7 @@ telescope_parameters = {'VATT4K':       vatt4k_param,
                         'PDO25CMF63ST8': pdo25cmf63st8_param,
                         'PDO05F81KAF1001E': pdo05mf81kaf1001e_param,
                         'PDS35CMSTL1001E': pds35cmstl1001e_param,
+                        'MMTCAM': mmtcam_param
                         }
 
 

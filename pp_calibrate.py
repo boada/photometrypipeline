@@ -147,7 +147,7 @@ def create_photometrycatalog(ra_deg, dec_deg, rad_deg, filtername,
             ('PANSTARRS' in catalogname and
              filtername not in {'gp1', 'rp1', 'ip1', 'zp1', 'yp1'}) or
             ('SkyMapper' in catalogname and
-             filtername not in {'g', 'r', 'i'}) or
+             filtername not in {'g', 'r', 'i', 'z'}) or
 
             ('GAIA' in catalogname and
              filtername not in {'G', 'RP', 'BP'})):

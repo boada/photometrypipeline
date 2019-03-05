@@ -448,7 +448,7 @@ def serendipitous_asteroids(catalogs, display=True):
 
 
 def distill(catalogs, man_targetname, offset, fixed_targets_file, posfile,
-            rejectionfilter, display=False, diagnostics=False,
+            rejectionfilter='pos', display=False, diagnostics=False,
             variable_stars=False, asteroids=False):
     """
     distill wrapper

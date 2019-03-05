@@ -44,7 +44,7 @@ try:
     from skimage.transform import resize
 except ImportError:
     print('Module skimage not found. Please install with: pip install '
-          'scikit-kimage')
+          'skimage')
     sys.exit()
 
 # pipeline-specific modules
@@ -236,7 +236,6 @@ class Prepare_Diagnostics(Diagnostics_Html):
 
         # create frame image
         imgdat = hdulist[0].data
-
         # normalize imgdat to pixel values 0 < px < 1
         imgdat[np.where(np.isnan(imgdat))[0]] = np.nanmedian(imgdat)
         imgdat = np.clip(imgdat, np.percentile(imgdat, 1),
@@ -1216,9 +1215,6 @@ class Distill_Diagnostics(Diagnostics_Html):
         data['lightcurveplots']['maps'] = {}
         for target in data['targetnames']:
 
-            if len(data[target]) == 0:
-                continue
-
             logging.info('create lightcurve plot for {:s}'.format(target))
 
             midtimes = np.array([dat[9][0] for dat in data[target]])
@@ -1549,22 +1545,16 @@ class Distill_Diagnostics(Diagnostics_Html):
                          target, target,
                          target.replace('_', ' '), target)
             if self.conf.individual_frame_pages:
-                try:
-                    html += ("<IMG SRC=\"{:s}\" USEMAP=\"#{:s}\">\n"
-                             "<MAP NAME=\"{:s}\">\n{:s}</MAP>\n\n").format(
-                                 data['lightcurveplots'][target], target,
-                                 target,
-                                 data['lightcurveplots']['maps'][target])
-                except KeyError:
-                    pass
+                html += ("<IMG SRC=\"{:s}\" USEMAP=\"#{:s}\">\n"
+                         "<MAP NAME=\"{:s}\">\n{:s}</MAP>\n\n").format(
+                             data['lightcurveplots'][target], target,
+                             target,
+                             data['lightcurveplots']['maps'][target])
             else:
-                try:
-                    html += ("<IMG SRC=\"{:s}\">\n"
-                             "<MAP NAME=\"{:s}\">\n{:s}</MAP>\n\n").format(
-                                 data['lightcurveplots'][target],
-                                 target, target)
-                except KeyError:
-                    pass
+                html += ("<IMG SRC=\"{:s}\">\n"
+                         "<MAP NAME=\"{:s}\">\n{:s}</MAP>\n\n").format(
+                             data['lightcurveplots'][target],
+                             target, target)
             html += "</TD>\n<TD>"
             if self.conf.show_target_animations:
                 html += "<IMG SRC=\"{:s}\" \>".format(

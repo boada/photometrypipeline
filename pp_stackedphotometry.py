@@ -144,10 +144,10 @@ if __name__ == '__main__':
     os.rename('skycoadd.fits', 'skycoadd/skycoadd.fits')
     os.chdir('skycoadd/')
 
-    # diagnostics and logging for skycoadd and comove go into respective dirs
-    _pp_conf.dataroot, _pp_conf.diagroot, \
-        _pp_conf.index_filename, _pp_conf.reg_filename, _pp_conf.cal_filename, \
-        _pp_conf.res_filename = _pp_conf.setup_diagnostics()
+    # # diagnostics and logging for skycoadd and comove go into respective dirs
+    # _pp_conf.dataroot, _pp_conf.diagroot, \
+    #     _pp_conf.index_filename, _pp_conf.reg_filename, _pp_conf.cal_filename, \
+    #     _pp_conf.res_filename = _pp_conf.setup_diagnostics()
 
     # setup logging again
     logging.basicConfig(filename=_pp_conf.log_filename,
@@ -237,10 +237,10 @@ if __name__ == '__main__':
         os.chdir('comove/')
 
         # diagnostics + logging for skycoadd and comove go into respective dirs
-        _pp_conf.dataroot, _pp_conf.diagroot, \
-            _pp_conf.index_filename, _pp_conf.reg_filename, \
-            _pp_conf.cal_filename, \
-            _pp_conf.res_filename = _pp_conf.setup_diagnostics()
+        # _pp_conf.dataroot, _pp_conf.diagroot, \
+        #     _pp_conf.index_filename, _pp_conf.reg_filename, \
+        #     _pp_conf.cal_filename, \
+        #     _pp_conf.res_filename = _pp_conf.setup_diagnostics()
 
         # setup logging again
         logging.basicConfig(filename=_pp_conf.log_filename,
@@ -294,7 +294,8 @@ if __name__ == '__main__':
     distillate = pp_distill.distill(calibration['catalogs'],
                                     man_targetname, man_offset,
                                     fixed_targets_file, posfile,
-                                    display=True, diagnostics=True)
+                                    display=True, diagnostics=True,
+                                    rejectionfilter)
 
     os.chdir(rootdir)
 
