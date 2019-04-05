@@ -1653,17 +1653,17 @@ kpno4mos3_param = {
     'airmass': 'AIRMASS',  # airmass keyword
 
     # source extractor settings
-    'source_minarea': 5,  # default sextractor source minimum N_pixels
-    'source_snr': 1.5,  # default sextractor snr for registration
+    'source_minarea': 9,  # default sextractor source minimum N_pixels
+    'source_snr': 3,  # default sextractor snr for registration
     'aprad_default': 5,  # default aperture radius in px
-    'aprad_range': [2, 10],  # [minimum, maximum] aperture radius (px)
+    'aprad_range': [3, 15],  # [minimum, maximum] aperture radius (px)
     'sex-config-file': rootpath + '/setup/kpno4mos1.sex',
     'mask_file': {},
     #                        mask files as a function of x,y binning
 
     # scamp settings
     'scamp-config-file': rootpath + '/setup/kpno4mos1.scamp',
-    'reg_max_mag': 19,
+    'reg_max_mag': 21,
     'reg_search_radius': 0.5,  # deg
     'source_tolerance': 'low',
 
@@ -3192,7 +3192,7 @@ p60opt_param = {
     'aprad_default': 5,  # default aperture radius in px
     'aprad_range': [2, 10],  # [minimum, maximum] aperture radius (px)
     'sex-config-file': rootpath+'/setup/p60opt.sex',
-    'mask_file': {},
+    'mask_file': {'1,1': rootpath+'/setup/mask_p60opt_1x1.fits'},
     #                        mask files as a function of x,y binning
 
     # registration settings (Scamp)
@@ -3219,7 +3219,7 @@ p60sedm_param = {
     'telescope_instrument': 'Palomar60-inch/SEDmachine',  # telescope/instrument name
     'telescope_keyword': 'P60SEDM',      # telescope/instrument keyword
     'observatory_code': '675',         # MPC observatory code
-    'secpix': (0.378, 0.378),  # pixel size (arcsec)
+    'secpix': (0.38, 0.38),  # pixel size (arcsec)
     # before binning
     'ext_coeff': 0.05,          # typical extinction coefficient
 
@@ -3253,8 +3253,8 @@ p60sedm_param = {
 
 
     # source extractor settings
-    'source_minarea': 9,  # default sextractor source minimum N_pixels
-    'source_snr': 3,  # default sextractor source snr for registration
+    'source_minarea': 7,  # default sextractor source minimum N_pixels
+    'source_snr': 2,  # default sextractor source snr for registration
     'aprad_default': 5,  # default aperture radius in px
     'aprad_range': [2, 10],  # [minimum, maximum] aperture radius (px)
     'sex-config-file': rootpath+'/setup/p60sedm.sex',
@@ -3263,8 +3263,8 @@ p60sedm_param = {
 
     # registration settings (Scamp)
     'scamp-config-file': rootpath+'/setup/p60sedm.scamp',
-    'reg_max_mag': 18,
-    'reg_search_radius': 1,  # deg
+    'reg_max_mag': 20,
+    'reg_search_radius': 0.3,  # deg
     'source_tolerance': 'high',
 
     # swarp settings
