@@ -294,8 +294,7 @@ if __name__ == '__main__':
     distillate = pp_distill.distill(calibration['catalogs'],
                                     man_targetname, man_offset,
                                     fixed_targets_file, posfile,
-                                    display=True, diagnostics=True,
-                                    rejectionfilter)
+                                    display=True, diagnostics=True)
 
     os.chdir(rootdir)
 

@@ -84,7 +84,9 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         logging.error('This is not a single-extension FITS file. Please '
                       'extract individual extensions and run them '
                       'individually.')
-        sys.exit()
+        raise ValueError(('This is not a single-extension FITS file. Please '
+                          'extract individual extensions and run them '
+                          'individually.'))
 
     # keywords that have to be implanted into each image
     implants = {}

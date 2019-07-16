@@ -1238,65 +1238,60 @@ ratir_param = {
     'photometry_catalogs': ['SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
 }
 
-# # Sutherland 74 inch, SHA
-# sl74sha_param = {
-#     'telescope_instrument' : 'Sutherland74SHA', # telescope/instrument name
-#     'telescope_keyword'    : 'SL74SHA',        # telescope/instrument keyword
-#     'observatory_code'     : 'K94',         # MPC observatory code
-#     'secpix'               : (0.08, 0.08), # pixel size (arcsec)
-#                                                # before binning
-#     'ext_coeff'            : 0.05,          # typical extinction coefficient
+sl40in_param = {
+    'telescope_instrument': 'Sutherland 40inch/SHOC',  # telescope/instrument name
+    'telescope_keyword': 'SL40IN',  # telescope/instrument keyword
+    'observatory_code': 'K94',  # MPC observatory code
+    'secpix': (0.167, 0.167),  # pixel size (arcsec) before binning
 
-#     # image orientation preferences
-#     'flipx'                : False,
-#     'flipy'                : False,
-#     'rotate'               : 0,
+    # image orientation preferences
+    'flipx': False,
+    'flipy': False,
+    'rotate': 0,
 
-#     # instrument-specific FITS header keywords
-#     'binning'              : ('HBIN', 'VBIN'), # binning in x/y
-#                              # _CH_ gets replaced with Channel number
-#     'extent'               : ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
-#     'ra'                   : 'TELRA',  # telescope pointing, RA
-#     'dec'                  : 'TELDEC', # telescope pointin, Dec
-#     'radec_separator'      : ':',   # RA/Dec hms separator, use 'XXX'
-#                                     # if already in degrees
-#     'date_keyword'         : 'FRAME', # obs date/time
-#                                                   # keyword; use
-#                                                   # 'date|time' if
-#                                                   # separate
-#     'obsmidtime_jd'        : 'MIDTIMJD', # obs midtime jd keyword
-#                                          # (usually provided by
-#                                          # pp_prepare
-#     'object'               : 'OBJECT',  # object name keyword
-#     'filter'               : 'FILTERA',  # filter keyword
-#     'filter_translations'  : {'V - Green': 'V'},
-#                              # filtername translation dictionary
-#     'exptime'              : 'EXPOSURE', # exposure time keyword (s)
-#     'airmass'              : 'AIRMASS', # airmass keyword
+    # instrument-specific FITS header keywords
+    'binning': ('HBIN', 'VBIN'),  # binning in x/y
+    'extent': ('NAXIS1', 'NAXIS2'),  # N_pixels in x/y
+    'ra': 'TELRA',  # telescope pointing, RA
+    'dec': 'TELDEC',  # telescope pointin, Dec
+    'radec_separator': ':',  # RA/Dec hms separator, use 'XXX'
+    # if already in degrees
+    'date_keyword': 'FRAME',  # obs date/time
+    # keyword; use
+    # 'date|time' if
+    # separate
+    'obsmidtime_jd': 'MJD-OBS',  # obs midtime jd keyword
+    # (usually provided by
+    # pp_prepare
+    'object': 'OBJECT',  # object name keyword
+    # 'filter': 'FILTERA',  # filter keyword
+    # 'filter_translations': {'V - Green': 'V','R - Red': 'R','I - Infrared': 'I'},
+    'filter': 'FILTERB',  # filter keyword
+    'filter_translations': {'u\'': 'u', 'g\'': 'g', 'r\'': 'r', 'i\'': 'i', 'z\'': 'z'},
+    # filtername translation dictionary
+    'exptime': 'EXPOSURE',  # exposure time keyword (s)
+    'airmass': 'AIRMASS',  # airmass keyword
 
-#     # source extractor settings
-#     'source_minarea'       : 12, # default sextractor source minimum N_pixels
-#     'aprad_default'        : 4, # default aperture radius in px
-#     'aprad_range'          : [2, 10], # [minimum, maximum] aperture radius (px)
-#     'sex-config-file'      : rootpath+'/setup/sl74sha.sex',
-#     'mask_file'            : {},
-#     #                        mask files as a function of x,y binning
+    # source extractor settings
+    'source_minarea': 12,  # default sextractor source minimum N_pixels
+    'source_snr': 3,  # default sextractor source snr for registration
+    'aprad_default': 5,  # default aperture radius in px
+    'aprad_range': [2, 10],  # [minimum, maximum] aperture radius (px)
+    'sex-config-file': rootpath + '/setup/sl40in.sex',
+    'mask_file': {},
+    #                        mask files as a function of x,y binning
 
-#     # registration settings (Scamp)
-#     'scamp-config-file'    : rootpath+'/setup/sl74sha.scamp',
+    # scamp settings
+    'scamp-config-file': rootpath + '/setup/sl40in.scamp',
+    'reg_max_mag': 19,
+    'reg_search_radius': 0.5,  # deg
+    'source_tolerance': 'high',
 
-#     # swarp settings
-#     'copy_keywords'        : ('TELESCOP,INSTRUME,FILTERA,EXPOSURE,OBJECT' +
-#                               'FRAME,TELRA,TELDEC,SECPIX,AIRMASS,' +
-#                               'TEL_KEYW'),
-#     #                        keywords to be copied in image
-#     #                        combination using swarp
-#     'swarp-config-file'    : rootpath+'/setup/sl74sha.swarp',
+    # default catalog settings
+    'astrometry_catalogs': ['GAIA'],
+    'photometry_catalogs': ['SkyMapper', 'SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
+}
 
-#     # default catalog settings
-#     'astrometry_catalogs'  : ['URAT-1', '2MASS', 'USNO-B1'],
-#     'photometry_catalogs'  : ['SDSS-R9', 'APASS9', 'PANSTARRS', '2MASS']
-# }
 
 # SOAR, Goodman [old] (imager)
 # running Goodman data requires the removal of header keywords
@@ -3314,7 +3309,7 @@ gmosn_param = {
     # pp_prepare
     'object': 'OBJECT',  # object name keyword
     'filter': 'FILTER2',  # filter keyword
-    'filter_translations': {'i_G0302': 'i', 'clear': None},
+    'filter_translations': {'r_G0303': 'r', 'i_G0302': 'i', 'clear': None},
     # filtername translation dictionary
     'exptime': 'EXPTIME',  # exposure time keyword (s)
     'airmass': 'AIRMASS',  # airmass keyword
@@ -3326,8 +3321,8 @@ gmosn_param = {
     'aprad_default': 6,  # default aperture radius in px
     'aprad_range': [2, 15],  # [minimum, maximum] aperture radius (px)
     'sex-config-file': rootpath+'/setup/gmosn.sex',
-    'mask_file': {'2,2': rootpath+'/setup/gmosn_mask_2x2.fits'},
-    #                        mask files as a function of x,y binning
+    'mask_file': {},  # '2,2': rootpath+'/setup/gmosn_mask_2x2.fits'},
+    #                #        mask files as a function of x,y binning
 
     # registration settings (Scamp)
     'scamp-config-file': rootpath+'/setup/gmosn.scamp',
@@ -3726,6 +3721,72 @@ mmtcam_param = {
     'photometry_catalogs': ['PANSTARRS', 'SDSS-R9', 'APASS9']
 }
 
+# Magellan, LDSS3-C
+magldss3_param = {
+    'telescope_instrument': 'Magellan/LDSS3',  # telescope/instrument name
+    'telescope_keyword': 'MAGLDSS3',      # telescope/instrument keyword
+    'observatory_code': '268',         # MPC observatory code
+    'secpix': (0.189, 0.189),  # pixel size (arcsec)
+    # before binning
+    'ext_coeff': 0.05,          # typical extinction coefficient
+
+
+    # image orientation preferences
+    'flipx': True,
+    'flipy': True,
+    'rotate': 0,
+
+    # instrument-specific FITS header keywords
+    'binning': ('BINNING#x1', 'BINNING#x2'),  # binning in x/y
+    'extent': ('NAXIS1', 'NAXIS2'),   # N_pixels in x/y
+    'ra': 'RA',  # telescope pointing, RA
+    'dec': 'DEC',  # telescope pointin, Dec
+    'radec_separator': ':',   # RA/Dec hms separator, use 'XXX'
+    # if already in degrees
+    'date_keyword': 'DATE-OBS|TIME-OBS',  # obs date/time
+    # keyword; use
+    # 'date|time' if
+    # separate
+    'obsmidtime_jd': 'MIDTIMJD',  # obs midtime jd keyword
+    # (usually provided by
+    # pp_prepare
+    'object': 'OBJECT',  # object name keyword
+    'filter': 'FILTER',  # filter keyword
+    'filter_translations': {'W4800_7800': 'VR'},
+    # filtername translation dictionary
+    'exptime': 'EXPTIME',  # exposure time keyword (s)
+    'airmass': 'AIRMASS',  # airmass keyword
+
+
+    # source extractor settings
+    'source_minarea': 10,  # default sextractor source minimum N_pixels
+    'source_snr': 3,  # default sextractor source snr for registration
+    'aprad_default': 3,  # default aperture radius in px
+    'aprad_range': [3, 15],  # [minimum, maximum] aperture radius (px)
+    'sex-config-file': rootpath+'/setup/magldss3.sex',
+    'mask_file': {},
+    #                        mask files as a function of x,y binning
+
+    # registration settings (Scamp)
+    'scamp-config-file': rootpath+'/setup/magldss3.scamp',
+    'reg_max_mag': 25,
+    'reg_search_radius': 0.1,  # deg
+    'source_tolerance': 'high',
+
+    # swarp settings
+    'copy_keywords': ('TELESCOP,INSTRUME,FILTER,EXPTIME,OBJECT,' +
+                      'DATE-OBS,TIME-OBS,RA,DEC,SECPIX,AIRMASS,' +
+                      'TEL_KEYW,BINNING,MIDTIMJD'),
+    #                         keywords to be copied in image
+    #                         combination using swarp
+    'swarp-config-file': rootpath+'/setup/mmtcam.swarp',
+
+    # default catalog settings
+    'astrometry_catalogs': ['GAIA'],
+    'photometry_catalogs': ['PANSTARRS', 'SDSS-R9', 'APASS9']
+}
+
+
 # access functions for telescope configurations
 
 
@@ -3741,7 +3802,6 @@ implemented_telescopes = ['VATT4K', 'DCTLMI', 'ARC35ARCTIC',
                           'RATIR',
                           'SOARGOODMAN',
                           'OHP120',
-                          #'SL74SAH',
                           'TNGDOLORES', 'GENERIC', 'KPNO4MOS1', 'FROST',
                           'MEXMAN', 'KPNO4MOS1', 'KPNOMOS3',
                           'KPNO4NEWF', 'UKIRTWFCAM', 'VLTFORS2',
@@ -3752,7 +3812,8 @@ implemented_telescopes = ['VATT4K', 'DCTLMI', 'ARC35ARCTIC',
                           'LCOSINFA03', 'LCOSINFA15',
                           'LCOSPECFS01', 'P60OPT', 'P60SEDM', 'GMOSN',
                           'DFOSC', 'LONEOS', 'PDO25CMF63ST8', 'PDO05F81KAF1001E',
-                          'PDS35CMSTL1001E', 'MMTCAM']
+                          'PDS35CMSTL1001E', 'MMTCAM', 'MAGLDSS3',
+                          'SL40IN']
 
 # translate INSTRUME (or others, see _pp_conf.py) header keyword into
 # PP telescope keyword
@@ -3782,7 +3843,7 @@ instrument_identifiers = {'= "Vatt4k"':        'VATT4K',
                           'C2':                'RATIR',
                           'C3':                'RATIR',
                           'C4':                'RATIR',
-                          #'SHA':               'SL74SHA',
+                          'SHA':               'SL40IN',
                           'Goodman Spectrograph': 'SOARGOODMANOLD',
                           'Andor Tech':        'OHP120',
                           'LRS':               'TNGDOLORES',
@@ -3821,7 +3882,8 @@ instrument_identifiers = {'= "Vatt4k"':        'VATT4K',
                           '0.5m f/8.1 Ritchey-Chretien_FLI KAF1001E':
                           'PDO05F81KAF1001E',
                           '0.35-m SCT_STL-1001E': 'PDS35CMSTL1001E',
-                          'MMT Rapid Imager': 'MMTCAM'}
+                          'MMT Rapid Imager': 'MMTCAM',
+                          'LDSS3-C': 'MAGLDSS3'}
 
 # translate telescope keyword into parameter set defined here
 telescope_parameters = {'VATT4K':       vatt4k_param,
@@ -3831,17 +3893,16 @@ telescope_parameters = {'VATT4K':       vatt4k_param,
                         'MAGIMACSL':      magimacsl_param,
                         'MAGIMACSS':      magimacss_param,
                         'CA123DLRMKIII': ca123dlrmkiii_param,
-                        'LOWELL31': lowell31_param,
-                        'LOWELL42': lowell42_param,
-                        'LOWELL72': lowell72_param,
-                        'CTIO09': ctio09_param,
-                        'CTIO10': ctio10_param,
-                        'CTIO13CCD': ctio13ccd_param,
-                        'UH88SNIFS': uh88snifs_param,
-                        'WIYN09HDI': wiyn09hdi_param,
-                        'GENERIC': generic_param,
-                        'RATIR': ratir_param,
-                        #'SL74SHA':       sl74sha_param,
+                        'LOWELL31':      lowell31_param,
+                        'LOWELL42':      lowell42_param,
+                        'LOWELL72':      lowell72_param,
+                        'CTIO09':        ctio09_param,
+                        'CTIO10':        ctio10_param,
+                        'CTIO13CCD':     ctio13ccd_param,
+                        'UH88SNIFS':     uh88snifs_param,
+                        'WIYN09HDI':     wiyn09hdi_param,
+                        'GENERIC':       generic_param,
+                        'RATIR':         ratir_param,
                         'SOARGOODMANOLD': soargoodmanold_param,
                         'SOARGOODMAN': soargoodman_param,
                         'OHP120':        ohp120_param,
@@ -3874,7 +3935,9 @@ telescope_parameters = {'VATT4K':       vatt4k_param,
                         'PDO25CMF63ST8': pdo25cmf63st8_param,
                         'PDO05F81KAF1001E': pdo05mf81kaf1001e_param,
                         'PDS35CMSTL1001E': pds35cmstl1001e_param,
-                        'MMTCAM': mmtcam_param
+                        'MMTCAM': mmtcam_param,
+                        'MAGLDSS3': magldss3_param,
+                        'SL40IN': sl40in_param,
                         }
 
 

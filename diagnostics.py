@@ -235,13 +235,14 @@ class Prepare_Diagnostics(Diagnostics_Html):
         hdulist = fits.open(filename, ignore_missing_end=True)
 
         # create frame image
-        imgdat = hdulist[0].data
+        imgdat = hdulist[0].data.astype(np.float64)
 
         # normalize imgdat to pixel values 0 < px < 1
         imgdat[np.where(np.isnan(imgdat))[0]] = np.nanmedian(imgdat)
         imgdat = np.clip(imgdat, np.percentile(imgdat, 1),
                          np.percentile(imgdat, 99))
-        imgdat = (imgdat - np.min(imgdat)) / np.max(imgdat - np.min(imgdat))
+        imgdat = (imgdat-np.min(imgdat)) / np.max(imgdat-np.min(imgdat)+0.1)
+
         # resize image larger than lg_image_size_px on one side
         imgdat = resize(imgdat,
                         (min(imgdat.shape[0], self.conf.image_size_lg_px),

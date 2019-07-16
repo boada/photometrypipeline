@@ -180,6 +180,11 @@ def get_binning(header, obsparam):
                                      split('#')[0]].split('x')[0])
             binning_y = float(header[obsparam['binning'][1].
                                      split('#')[0]].split('x')[1])
+        elif '#_' in obsparam['binning'][0]:
+            binning_x = float(header[obsparam['binning'][0].
+                                     split('#')[0]].split('_')[0])
+            binning_y = float(header[obsparam['binning'][1].
+                                     split('#')[0]].split('_')[1])
         elif '#CH#' in obsparam['binning'][0]:
             # only for RATIR
             channel = header['INSTRUME'].strip()[1]

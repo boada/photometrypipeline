@@ -80,9 +80,11 @@ observatories/instruments:
 +--------------------------+--------------------+----------------+
 | Palomar 60-inch          | SED Machine        | P60SEDM        |
 +--------------------------+--------------------+----------------+
+| San Pedro Martir 84cm    | Mexman (E2V CCD)   | MEXMAN         |
++--------------------------+--------------------+----------------+
 | SOAR 4.1m                | Goodman (**)       | SOARGOODMAN    |
 +--------------------------+--------------------+----------------+
-| San Pedro Martir 84cm    | Mexman (E2V CCD)   | MEXMAN         |
+| Sutherland 40-inch       | SHA                | SL40IN         |
 +--------------------------+--------------------+----------------+
 | Telescopio Nazionale     | DOLORES            | TNGDOLORES     |
 | Galileo                  |                    |                |
