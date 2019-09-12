@@ -252,7 +252,7 @@ the logical order:
    the measured FWHMs.
 
 
-.. function:: pp_calibrate ([-minstars int/float], [-catalog string], [-filter string], [-maxflag integer], [-instrumental], [-solar], images)
+.. function:: pp_calibrate ([-minstars int/float], [-catalog string], [-filter string], [-maxflag integer], [-instrumental], [-solar], [-use_all_stars], images)
 
    photometric calibration of each input frame in one specific filter
    
@@ -293,7 +293,10 @@ the logical order:
                   using the PANSTARRS, APASS, and SDSS catalogs. The
                   threshold of solar-like colors is defined by the
                   `_pp_conf.solcol` parameter; the default is the
-                  actual color index +- 0.2 mag.
+		  actual color index +- 0.2 mag.
+   :param use_all_stars: if used, no quality checks are performed on
+			 calibration stars and all stars are used in the
+			 calibration.
    :param images: images to run `pp_calibrate` on
 
    

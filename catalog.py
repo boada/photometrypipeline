@@ -1,3 +1,5 @@
+import _pp_conf
+from pandas import read_sql
 """
 CATALOG - class structure for dealing with astronomical catalogs,
           FITS_LDAC files, and sqlite databases.
@@ -37,7 +39,6 @@ from astropy.io import fits
 import scipy.optimize as optimization
 import warnings
 warnings.simplefilter("ignore", UserWarning)
-from pandas import read_sql
 
 
 try:
@@ -61,7 +62,6 @@ sql.register_adapter(np.int64, int)
 sql.register_adapter(np.int32, int)
 
 # import pp modules
-import _pp_conf
 
 # set Vizier server mirror
 Vizier.VIZER_SERVER = 'vizier.cfa.harvard.edu'
@@ -183,7 +183,7 @@ class catalog(object):
 
     def download_catalog(self, ra_deg, dec_deg, rad_deg,
                          max_sources, save_catalog=False,
-                         max_mag=21):
+                         max_mag=21, use_all_stars=False):
         """
         download existing catalog from VIZIER server using self.catalogname
         input: ra_deg, dec_deg, rad_deg, max_sources, (display_progress),
@@ -268,19 +268,13 @@ class catalog(object):
             self.data['mag'] = self.data['rp1mag']  # use rmag for astrometry
 
             # clip self.data to enforce magnitude error limits
-            self.data = self.data[self.data['e_rp1mag'] <= 0.03]
+            if not use_all_stars:
+                self.data = self.data[self.data['e_rp1mag'] <= 0.03]
 
         # --------------------------------------------------------------------
         # use astroquery vizier query for SkyMapper
         elif self.catalogname == 'SkyMapper':
-            vquery = Vizier(columns=['ObjectId', 'RAICRS', 'DEICRS',
-                                     'e_RAICRS', 'e_DEICRS',
-                                     'uPSF', 'e_uPSF',
-                                     'vPSF', 'e_vPSF',
-                                     'gPSF', 'e_gPSF',
-                                     'rPSF', 'e_rPSF',
-                                     'iPSF', 'e_iPSF',
-                                     'zPSF', 'e_zPSF'],
+            vquery = Vizier(columns=['all'],
                             column_filters={"rPSF":
                                             ("<{:f}".format(max_mag))},
                             row_limit=max_sources,
@@ -299,7 +293,19 @@ class catalog(object):
                     self.catalogname))
                 return 0
 
-            print(self.data.columns)
+            # throw out columns we don't need
+            new_data = Table(self.data)
+            for col in self.data.columns:
+                if col not in ['ObjectId', 'RAICRS', 'DEICRS',
+                               'e_RAICRS', 'e_DEICRS',
+                               'uPSF', 'e_uPSF',
+                               'vPSF', 'e_vPSF',
+                               'gPSF', 'e_gPSF',
+                               'rPSF', 'e_rPSF',
+                               'zPSF', 'e_zPSF',
+                               'iPSF', 'e_iPSF']:
+                    new_data.remove_column(col)
+            self.data = new_data
 
             # rename column names using PP conventions
             self.data.rename_column('ObjectId', 'ident')
@@ -309,8 +315,8 @@ class catalog(object):
             self.data['e_ra_deg'].convert_unit_to(u.deg)
             self.data.rename_column('e_DEICRS', 'e_dec_deg')
             self.data['e_dec_deg'].convert_unit_to(u.deg)
-            self.data.rename_column('uPSF', 'umag')
-            self.data.rename_column('e_uPSF', 'e_umag')
+            #self.data.rename_column('uPSF', 'umag')
+            #self.data.rename_column('e_uPSF', 'e_umag')
             self.data.rename_column('vPSF', 'vmag')
             self.data.rename_column('e_vPSF', 'e_vmag')
             self.data.rename_column('gPSF', 'gmag')
@@ -320,10 +326,10 @@ class catalog(object):
             self.data.rename_column('iPSF', 'imag')
             self.data.rename_column('e_iPSF', 'e_imag')
             self.data.rename_column('zPSF', 'zmag')
-            # self.data.rename_column('e_zPSF', 'e_zmag')
-            # e_zPSF does not seem to exist...
+            self.data.rename_column('e_zPSF', 'e_zmag')
 
-            self.data = self.data[self.data['e_rmag'] <= 0.03]
+            if not use_all_stars:
+                self.data = self.data[self.data['e_rmag'] <= 0.03]
 
         # --------------------------------------------------------------------
 
@@ -367,6 +373,41 @@ class catalog(object):
             # TBD:
             # - implement proper error ellipse handling
             # - implement propor motion handling for DR2
+
+        # --------------------------------------------------------------------
+
+        elif self.catalogname == 'USNO-B1':
+            # astrometric and photometric catalog
+            vquery = Vizier(columns=['USNO-B1.0', 'RAJ2000', 'DEJ2000',
+                                     'e_RAJ2000', 'e_DEJ2000',
+                                     'R2mag'],
+                            column_filters={"R2mag":
+                                            ("<{:f}".format(max_mag))},
+                            row_limit=max_sources,
+                            timeout=300)
+
+            try:
+                self.data = vquery.query_region(field,
+                                                radius=rad_deg*u.deg,
+                                                catalog="I/284/out",
+                                                cache=False)[0]
+            except IndexError:
+                if self.display:
+                    print('no data available from {:s}'.format(
+                        self.catalogname))
+                logging.error('no data available from {:s}'.format(
+                    self.catalogname))
+                return 0
+
+            # rename column names using PP conventions
+            self.data.rename_column('USNO-B1.0', 'ident')
+            self.data.rename_column('RAJ2000', 'ra_deg')
+            self.data.rename_column('DEJ2000', 'dec_deg')
+            self.data.rename_column('e_RAJ2000', 'e_ra_deg')
+            self.data['e_ra_deg'].convert_unit_to(u.deg)
+            self.data.rename_column('e_DEJ2000', 'e_dec_deg')
+            self.data['e_dec_deg'].convert_unit_to(u.deg)
+            self.data['mag'] = self.data['R2mag']  # required for scamp
 
         # --------------------------------------------------------------------
 
@@ -435,11 +476,12 @@ class catalog(object):
 
             # filter columns to only have really good detections
             # see the Vizier webpage for a description of what the flags mean
-            Qflags = set('ABC')  # only A, B, or C flagged detections
-            qmask = [True if not set(item).difference(Qflags) else False
-                     for item in self.data['Qflg']]
-            # filter columns to only have really good detections
-            self.data = self.data[qmask]
+            if not use_all_stars:
+                Qflags = set('ABC')  # only A, B, or C flagged detections
+                qmask = [True if not set(item).difference(Qflags) else False
+                         for item in self.data['Qflg']]
+                # filter columns to only have really good detections
+                self.data = self.data[qmask]
 
             # By default, 2MASS magnitudes are VEGA magnitudes
             # Convert to AB mags see Blanton et al., AJ, 2005, Eqs. (5)
@@ -631,21 +673,22 @@ class catalog(object):
                 return 0
 
             # apply some quality masks
-            try:
-                mask_primary = self.data['mode'] == 1
-                mask_clean = self.data['clean'] == 1
-                mask_star = self.data['type'] == 6
-                mask_bright = self.data['fiberMag_g'] < max_mag
-                mask = mask_primary & mask_clean & mask_star & mask_bright
-            except TypeError:
-                if self.display:
-                    print('no data available from {:s}'.format(
-                        self.catalogname))
-                logging.error('no data available from {:s}'.format(
-                    self.catalogname))
-                return 0
+            if not use_all_stars:
+                try:
+                    mask_primary = self.data['mode'] == 1
+                    mask_clean = self.data['clean'] == 1
+                    mask_star = self.data['type'] == 6
+                    mask_bright = self.data['fiberMag_g'] < max_mag
+                    mask = mask_primary & mask_clean & mask_star & mask_bright
+                except TypeError:
+                    if self.display:
+                        print('no data available from {:s}'.format(
+                            self.catalogname))
+                        logging.error('no data available from {:s}'.format(
+                            self.catalogname))
+                        return 0
 
-            self.data = self.data[mask]
+                self.data = self.data[mask]
 
             # rename column names using PP conventions
             self.data.rename_column('objID', 'ident')
@@ -982,7 +1025,7 @@ class catalog(object):
     def lin_func(self, x, a, b):
         return a*x + b
 
-    def transform_filters(self, targetfilter):
+    def transform_filters(self, targetfilter, use_all_stars=False):
         """
         transform a given catalog into a different filter band; crop the
         resulting catalog to only those sources that have transformed magnitudes
@@ -1019,13 +1062,16 @@ class catalog(object):
                              self['e_umag'].data])
 
             # sort out sources that do not meet the C&G requirements
-            keep_idc = (mags[1]-mags[2] > 0.08) & (mags[1]-mags[2] < 0.5) & \
-                (mags[0]-mags[1] > 0.2) & (mags[0]-mags[1] < 1.4) & \
-                (mags[0] >= 14.5) & (mags[0] < 19.5) & \
-                (mags[1] >= 14.5) & (mags[1] < 19.5) & \
-                (mags[2] >= 14.5) & (mags[2] < 19.5)
-            filtered_mags = np.array([mags[i][keep_idc]
-                                      for i in range(len(mags))])
+            if not use_all_stars:
+                keep_idc = ((mags[1]-mags[2] > 0.08) & (mags[1]-mags[2] < 0.5) &
+                            (mags[0]-mags[1] > 0.2) & (mags[0]-mags[1] < 1.4) &
+                            (mags[0] >= 14.5) & (mags[0] < 19.5) &
+                            (mags[1] >= 14.5) & (mags[1] < 19.5) &
+                            (mags[2] >= 14.5) & (mags[2] < 19.5))
+                filtered_mags = np.array([mags[i][keep_idc]
+                                          for i in range(len(mags))])
+            else:
+                filtered_mags = mags
 
             # ... derive a linear best fit and remove outliers (>3 sigma)
             ri = np.array(filtered_mags[1]) - np.array(filtered_mags[2])
@@ -1115,7 +1161,10 @@ class catalog(object):
                              self['e_imag'].data])
 
             # sort out sources that do not meet the C&G requirements
-            keep_idc = (mags[0]-mags[1] > 0.08) & (mags[0]-mags[1] < 0.5)
+            if not use_all_stars:
+                keep_idc = (mags[0]-mags[1] > 0.08) & (mags[0]-mags[1] < 0.5)
+            else:
+                keep_idc = [True]*len(mags[0])
 
             # transformed magnitudes; uncertainties through Gaussian and C&G2008
             nmags = np.array([np.empty(len(mags[0])),
@@ -1180,6 +1229,9 @@ class catalog(object):
                 # al. 2009, MNRAS
                 if mags[0][idx] > 18 or mags[1][idx] > 17:
                     keep = False
+
+                if use_all_stars:
+                    keep = True
 
                 if keep:
                     # 0.064 (sig: 0.035) is a systematic offset
@@ -1386,9 +1438,10 @@ class catalog(object):
             # transform magnitudes to Johnson-Cousins, Vega system
             # using http://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html
 
-            colormask = ((self.data['BPmag']-self.data['RPmag'] > -0.5) &
-                         (self.data['BPmag']-self.data['RPmag'] < 2.75))
-            self.data = self.data[colormask]
+            if not use_all_stars:
+                colormask = ((self.data['BPmag']-self.data['RPmag'] > -0.5) &
+                             (self.data['BPmag']-self.data['RPmag'] < 2.75))
+                self.data = self.data[colormask]
 
             g = self.data['Gmag'].data
             e_g = self.data['e_Gmag'].data
@@ -1437,17 +1490,18 @@ class catalog(object):
             # transform magnitudes to Johnson-Cousins, Vega system
             # using http://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html
 
-            if targetfilter == 'g':
-                colormask = ((self.data['BPmag']-self.data['RPmag'] > -0.5) &
-                             (self.data['BPmag']-self.data['RPmag'] < 2.0))
-            elif targetfilter == 'r':
-                colormask = ((self.data['BPmag']-self.data['RPmag'] > 0.2) &
-                             (self.data['BPmag']-self.data['RPmag'] < 2.7))
-            elif targetfilter == 'i':
-                colormask = ((self.data['BPmag']-self.data['RPmag'] > 0) &
-                             (self.data['BPmag']-self.data['RPmag'] < 4.5))
+            if not use_all_stars:
+                if targetfilter == 'g':
+                    colormask = ((self.data['BPmag']-self.data['RPmag'] > -0.5) &
+                                 (self.data['BPmag']-self.data['RPmag'] < 2.0))
+                elif targetfilter == 'r':
+                    colormask = ((self.data['BPmag']-self.data['RPmag'] > 0.2) &
+                                 (self.data['BPmag']-self.data['RPmag'] < 2.7))
+                elif targetfilter == 'i':
+                    colormask = ((self.data['BPmag']-self.data['RPmag'] > 0) &
+                                 (self.data['BPmag']-self.data['RPmag'] < 4.5))
 
-            self.data = self.data[colormask]
+                self.data = self.data[colormask]
 
             g = self.data['Gmag'].data
             e_g = self.data['e_Gmag'].data
@@ -1512,8 +1566,9 @@ class catalog(object):
                  astropy.table functionality; how about astropy.coord matching?
         """
 
-        this_tree = spatial.KDTree(list(zip(self[match_keys_this_catalog[0]].data,
-                                            self[match_keys_this_catalog[1]].data)))
+        this_tree = spatial.KDTree(
+            list(zip(self[match_keys_this_catalog[0]].data,
+                     self[match_keys_this_catalog[1]].data)))
 
         # kd-tree matching
         if tolerance is not None:
