@@ -1,3 +1,4 @@
+from numpy import sqrt
 """ PP_SETUP - photometry pipeline setup file
     v1.0: 2018-11-15, mommermiscience@gmail.com
 """
@@ -26,8 +27,6 @@ here - parameters provided to the function through the command line
 will override the definitions in this class. Definitions below are
 group into different class based on their pp function association.
 """
-
-from numpy import sqrt
 
 
 class Conf():
@@ -74,6 +73,7 @@ class ConfDistill(Conf):
         # geometric positional uncertainties > 10"
         'pos': lambda dat: (sqrt((dat[1]-dat[3])**2 +
                                  (dat[2]-dat[4])**2)*3600 > 10),
+        'none': lambda dat: False,
     }
 
 

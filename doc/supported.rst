@@ -32,6 +32,8 @@ observatories/instruments:
 +--------------------------+--------------------+----------------+
 | Gran Canaria 1.5m        | MUSCAT2            | TCS15MUSCAT2   |
 +--------------------------+--------------------+----------------+
+| INT                      | WFC                | INTWFC         |
++--------------------------+--------------------+----------------+
 | IRSF 1.4m                | SIRIUS             | IRSFSIRIUS     |
 +--------------------------+--------------------+----------------+
 | KMTnet SAAO              | --- (*)            | KMTNETS        |
@@ -70,6 +72,8 @@ observatories/instruments:
 +--------------------------+--------------------+----------------+
 | Magellan                 | IMACS short camera | MAGIMACSS      |
 +--------------------------+--------------------+----------------+
+| McDonald Struve 2.1m     | CQUEAN             | STRUVECQUEAN   |
++--------------------------+--------------------+----------------+
 | MMT                      | MMTCAM             | MMTCAM         |
 +--------------------------+--------------------+----------------+
 | Observatoire Haute-      | CCD                | OHP120         |
@@ -81,6 +85,9 @@ observatories/instruments:
 | Palomar 60-inch          | SED Machine        | P60SEDM        |
 +--------------------------+--------------------+----------------+
 | San Pedro Martir 84cm    | Mexman (E2V CCD)   | MEXMAN         |
++--------------------------+--------------------+----------------+
+| Steward Observatory 90"  | Spacewatch Camera  | STEWARD90SCC   |
+| Bok Telescope            |                    |                |
 +--------------------------+--------------------+----------------+
 | SOAR 4.1m                | Goodman (**)       | SOARGOODMAN    |
 +--------------------------+--------------------+----------------+
@@ -98,6 +105,8 @@ observatories/instruments:
 +--------------------------+--------------------+----------------+
 | WIYN 0.9m                | Half Degree Imager | WIYN09HDI      |
 +--------------------------+--------------------+----------------+
+| ZTF                      | Mosaic (***)       | ZTFMOSAIC      |
++--------------------------+--------------------+----------------+
 | Generic Telescope        | any                | GENERIC        |
 +--------------------------+--------------------+----------------+
 
@@ -112,8 +121,14 @@ keywords ``PARAM0``, ``PARAM61``, ``PARAM62``, and ``PARAM63`` prior
 to running PP, e.g., using the ``delhead`` command provided by
 `WCSTools`_.
 
+(***): wcs provided with telescope data is usually excellent; in this case
+I suggest skipping registration and to use ``pp_run`` with the
+``-keep_wcs`` option.
+
 It is recommended to stitch images from cameras with multiple amplifiers
-together using the correct orientations.
+together using the correct orientations. Furthermore, it is recommended to
+flatten FITS files with multiple headers by simply combining the individual
+headers under a single extension.
  
 If you would like to use the pipeline for other observatories, please
 contact me.
@@ -132,6 +147,8 @@ photometric calibration:
 | Gaia DR1 (`Gaia`_)     | astrometric              | yes           | G                        | all-sky catalog, excellent astrometry, G < 20 mag          |
 +------------------------+--------------------------+---------------+--------------------------+------------------------------------------------------------+
 | Gaia/TGAS (`TGAS`_)    | astrometric              | yes           | G                        | all-sky catalog, excellent astrometry, G < 12 mag          |
++------------------------+--------------------------+---------------+--------------------------+------------------------------------------------------------+
+| USNO-B1.0              | astrometric              | yes           | R2                       | good astrometry, V < 21 mag                                |
 +------------------------+--------------------------+---------------+--------------------------+------------------------------------------------------------+
 | 2MASS (`2MASS`_)       | astrometric/photometric  | yes           | J, H, Ks, K* (Vega)      | all-sky NIR catalog, good astrometry                       |
 +------------------------+--------------------------+---------------+--------------------------+------------------------------------------------------------+

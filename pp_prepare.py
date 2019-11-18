@@ -204,6 +204,8 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         # add header keywords for Source Extractor
         if 'EPOCH' not in header:
             header['EPOCH'] = (2000, 'PP: required for registration')
+        elif int(header['EPOCH']) < 1950:
+            header['EPOCH'] = (2000, 'PP: required for registration')
 
         # add header keywords for SCAMP
         header['PHOTFLAG'] = ('F', 'PP: data is not photometric (SCAMP)')
@@ -232,7 +234,8 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
                               'AP_0_1', 'AP_0_2', 'AP_1_0', 'AP_1_1',
                               'AP_2_0', 'BP_ORDER', 'BP_0_0', 'BP_0_1',
                               'BP_0_2', 'BP_1_0', 'BP_1_1', 'BP_2_0',
-                              'CDELT1', 'CDELT2', 'CRDELT1', 'CRDELT2'] +
+                              'CDELT1', 'CDELT2', 'CRDELT1', 'CRDELT2',
+                              'PROJP1', 'PROJP2', 'PROJP3', 'CUNIT1', 'CUNIT2'] +
                              ['TR{}_{}'.format(i, j)
                               for i in range(1, 3)
                               for j in range(15)]):
@@ -264,11 +267,15 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
 
         # create observation midtime jd
         if not keep_wcs or 'MIDTIMJD' not in header:
-            if obsparam['date_keyword'].find('|') == -1:
+            if ('|' not in obsparam['date_keyword'] and
+                    'JD' not in obsparam['date_keyword']):
                 header['MIDTIMJD'] = \
                     (toolbox.dateobs_to_jd(header[obsparam['date_keyword']]) +
                      float(header[obsparam['exptime']])/2./86400.,
                      'PP: obs midtime')
+            elif 'JD' in obsparam['date_keyword']:
+                header['MIDTIMJD'] = (header[obsparam['date_keyword']],
+                                      'PP: obs midtime')
             else:
                 datetime = (header[obsparam['date_keyword'].split('|')[0]] +
                             'T' + header[obsparam['date_keyword'].split('|')[1]])
@@ -338,6 +345,7 @@ def prepare(filenames, obsparam, header_update, keep_wcs=False,
         # transform to equinox J2000, if necessary
         if 'EQUINOX' in header:
             equinox = float(header['EQUINOX'])
+            header['EQUINOX'] = equinox
             if equinox != 2000.:
                 anyeq = SkyCoord(ra=ra_deg*u.deg, dec=dec_deg*u.deg,
                                  frame=FK5,

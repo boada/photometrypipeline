@@ -101,7 +101,8 @@ if rootpath is None:
 
 # potential FITS header keywords for looking up the instrument
 # any unique header keyword works as a potential identifier
-instrument_keys = ['PPINSTRU', 'LCAMMOD', 'FPA', 'CAM_NAME', 'INSTRUME']
+instrument_keys = ['PPINSTRU', 'LCAMMOD', 'FPA', 'CAM_NAME', 'INSTRUME',
+                   'TELESCOP']
 
 execfile(rootpath+'/setup/telescopes.py')
 
@@ -140,7 +141,7 @@ else:
 
 # list of available catalogs
 allcatalogs = ['URAT-1', '2MASS', 'SDSS-R9', 'SDSS-R13', 'APASS9', 'GAIA',
-               'PANSTARRS', 'TGAS', 'SkyMapper']
+               'PANSTARRS', 'TGAS', 'SkyMapper', 'USNO-B1']
 
 # catalog magnitude systems
 allcatalogs_magsys = {'URAT-1': 'Vega',
@@ -151,7 +152,8 @@ allcatalogs_magsys = {'URAT-1': 'Vega',
                       'GAIA': 'Vega',
                       'PANSTARRS': 'AB',
                       'TGAS': 'Vega',
-                      'SkyMapper': 'AB'}
+                      'SkyMapper': 'AB',
+                      'USNO-B1': 'Vega'}
 
 # ---- pipeline preferences
 # (if you don't know what you're doing, better don't mess around here)

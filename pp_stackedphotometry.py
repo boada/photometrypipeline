@@ -5,6 +5,18 @@
 """
 from __future__ import print_function
 
+import diagnostics as diag
+import pp_combine
+import pp_distill
+import pp_calibrate
+import pp_photometry
+import pp_register
+import pp_extract
+import pp_prepare
+from catalog import *
+import _pp_conf
+
+
 # Photometry Pipeline
 # Copyright (C) 2016-2018 Michael Mommert, mommermiscience@gmail.com
 
@@ -49,16 +61,6 @@ if sys.version_info > (3, 0):
     from builtins import range
 
 # pipeline-specific modules
-import _pp_conf
-from catalog import *
-import pp_prepare
-import pp_extract
-import pp_register
-import pp_photometry
-import pp_calibrate
-import pp_distill
-import pp_combine
-import diagnostics as diag
 
 # setup logging
 logging.basicConfig(filename=_pp_conf.log_filename,
@@ -82,10 +84,14 @@ if __name__ == '__main__':
                         default=0)
     parser.add_argument('-snr',
                         help='SNR limit for detected sources',
-                        default=3)
+                        default=1.5)
     parser.add_argument('-solar',
                         help='restrict to solar-color stars',
                         action="store_true", default=False)
+    parser.add_argument('-reject',
+                        help='schemas for target rejection',
+                        nargs=1, default='pos')
+
     parser.add_argument('images', help='images to process',
                         nargs='+')
     args = parser.parse_args()
@@ -95,6 +101,7 @@ if __name__ == '__main__':
     fixed_aprad = float(args.fixed_aprad)
     snr = float(args.snr)
     solar = args.solar
+    reject = args.reject[0]
     filenames = args.images
 
     # use current directory as root directory
@@ -294,6 +301,7 @@ if __name__ == '__main__':
     distillate = pp_distill.distill(calibration['catalogs'],
                                     man_targetname, man_offset,
                                     fixed_targets_file, posfile,
+                                    rejectionfilter=reject,
                                     display=True, diagnostics=True)
 
     os.chdir(rootdir)

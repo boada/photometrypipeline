@@ -4,7 +4,7 @@ Functions
 The individual pipeline functions are introduced and explained
 below. All functions presented here can be called from the terminal. 
 
-.. function:: pp_run ([-prefix string], [-target string], [-filter string], [-fixed_aprad float], [-solar], images)
+.. function:: pp_run ([-prefix string], [-target string], [-filter string], [-fixed_aprad float], [-solar], [-rerun_registration], [-asteroids], [-keep_wcs], images)
 
    serves as a wrapper for all the individual pipeline processes
 
@@ -35,9 +35,8 @@ below. All functions presented here can be called from the terminal.
 			       all frames registered successfull during
 			       the first try.
    :param -asteroids: (optional) make use of ``-asteroids`` option of
-                      :func:`pp_distill`
-   :param -filter: (optional) make use of ``-filter`` option of
-                   :func:`pp_distill`, default: ``pos``
+                  :func:`pp_distill`
+   :param -keep_wcs: (optional) skip registration and keep wcs information 
    :param images: images on which the pipeline is supposed to run,
                   wildcard symbols (``'*'``, ``'?'``) can be used; or,
                   by using ``all``, PP runs on all FITS files in
@@ -211,6 +210,7 @@ the logical order:
                             curve-of-growth analysis
    :param -target_only: only account for the target in the
                         curve-of-growth analysis
+   :param -nodeblending: (optional) deactives Source Extractor deblending
    :param images: images to run `pp_photometry` on
 
 
@@ -252,7 +252,7 @@ the logical order:
    the measured FWHMs.
 
 
-.. function:: pp_calibrate ([-minstars int/float], [-catalog string], [-filter string], [-maxflag integer], [-instrumental], [-solar], images)
+.. function:: pp_calibrate ([-minstars int/float], [-catalog string], [-filter string], [-maxflag integer], [-instrumental], [-solar], [-use_all_stars], images)
 
    photometric calibration of each input frame in one specific filter
    
@@ -293,7 +293,10 @@ the logical order:
                   using the PANSTARRS, APASS, and SDSS catalogs. The
                   threshold of solar-like colors is defined by the
                   `_pp_conf.solcol` parameter; the default is the
-                  actual color index +- 0.2 mag.
+		  actual color index +- 0.2 mag.
+   :param use_all_stars: if used, no quality checks are performed on
+			 calibration stars and all stars are used in the
+			 calibration.
    :param images: images to run `pp_calibrate` on
 
    

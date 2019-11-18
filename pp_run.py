@@ -64,7 +64,7 @@ logging.basicConfig(filename=_pp_conf.log_filename,
 
 def run_the_pipeline(filenames, man_targetname, man_filtername,
                      fixed_aprad, source_tolerance, solar,
-                     rerun_registration, asteroids):
+                     rerun_registration, asteroids, keep_wcs):
     """
     wrapper to run the photometry pipeline
     """
@@ -180,48 +180,50 @@ def run_the_pipeline(filenames, man_targetname, man_filtername,
     # prepare fits files for photometry pipeline
     preparation = pp_prepare.prepare(filenames, obsparam,
                                      change_header,
-                                     diagnostics=True, display=True)
+                                     diagnostics=True, display=True,
+                                     keep_wcs=keep_wcs)
 
     # run wcs registration
 
-    # default sextractor/scamp parameters
-    snr, source_minarea = obsparam['source_snr'], obsparam['source_minarea']
-    aprad = obsparam['aprad_default']
+    if not keep_wcs:
+        # default sextractor/scamp parameters
+        snr, source_minarea = obsparam['source_snr'], obsparam['source_minarea']
+        aprad = obsparam['aprad_default']
 
-    registration_run_number = 0
-    while True:
+        registration_run_number = 0
+        while True:
 
-        print('\n----- run image registration\n')
-        registration = pp_register.register(filenames, telescope, snr,
-                                            source_minarea, aprad,
-                                            None, obsparam,
-                                            obsparam['source_tolerance'],
-                                            False,
-                                            display=True,
-                                            diagnostics=True)
+            print('\n----- run image registration\n')
+            registration = pp_register.register(filenames, telescope, snr,
+                                                source_minarea, aprad,
+                                                None, obsparam,
+                                                obsparam['source_tolerance'],
+                                                False,
+                                                display=True,
+                                                diagnostics=True)
 
-        if len(registration['badfits']) == len(filenames):
-            summary_message = "<FONT COLOR=\"red\">registration failed</FONT>"
-        elif len(registration['goodfits']) == len(filenames):
-            summary_message = "<FONT COLOR=\"green\">all images registered" + \
-                "</FONT>; "
-            break
-        else:
-            summary_message = "<FONT COLOR=\"orange\">registration failed for " + \
-                ("%d/%d images</FONT>; " %
-                 (len(registration['badfits']),
-                  len(filenames)))
-        # break from loop if maximum number of iterations (2) achieved
-        registration_run_number += 1
-        if registration_run_number == 2:
-            break
+            if len(registration['badfits']) == len(filenames):
+                summary_message = "<FONT COLOR=\"red\">registration failed</FONT>"
+            elif len(registration['goodfits']) == len(filenames):
+                summary_message = "<FONT COLOR=\"green\">all images registered" + \
+                    "</FONT>; "
+                break
+            else:
+                summary_message = "<FONT COLOR=\"orange\">registration failed for " + \
+                    ("%d/%d images</FONT>; " %
+                     (len(registration['badfits']),
+                      len(filenames)))
+            # break from loop if maximum number of iterations (2) achieved
+            registration_run_number += 1
+            if registration_run_number == 2:
+                break
 
-    # add information to summary website, if requested
-    if _pp_conf.use_diagnostics_summary:
-        diag.insert_into_summary(summary_message)
+        # add information to summary website, if requested
+        if _pp_conf.use_diagnostics_summary:
+            diag.insert_into_summary(summary_message)
 
-    # in case not all image were registered successfully
-    filenames = registration['goodfits']
+        # in case not all image were registered successfully
+        filenames = registration['goodfits']
 
     # stop here if registration failed for all images
     if len(filenames) == 0:
@@ -370,6 +372,9 @@ if __name__ == '__main__':
     parser.add_argument('-reject',
                         help='schemas for target rejection',
                         nargs=1, default='pos')
+    parser.add_argument('-keep_wcs',
+                        help='keep wcs information and skip registration',
+                        action="store_true", default=False)
     parser.add_argument('images', help='images to process or \'all\'',
                         nargs='+')
 
@@ -383,6 +388,7 @@ if __name__ == '__main__':
     rerun_registration = args.rerun_registration
     asteroids = args.asteroids
     rejectionfilter = args.reject
+    keep_wcs = args.keep_wcs
     filenames = sorted(args.images)
 
     # if filenames = ['all'], walk through directories and run pipeline
@@ -426,5 +432,5 @@ if __name__ == '__main__':
         # call run_the_pipeline only on filenames
         run_the_pipeline(filenames, man_targetname, man_filtername,
                          fixed_aprad, source_tolerance, solar,
-                         rerun_registration, asteroids)
+                         rerun_registration, asteroids, keep_wcs)
         pass

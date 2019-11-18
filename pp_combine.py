@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" PP_COMBINE - combine frames based on wcs 
+""" PP_COMBINE - combine frames based on wcs
     v1.0: 2017-10-03, mommermiscience@gmail.com
 """
 from __future__ import print_function, division
@@ -151,7 +151,7 @@ def combine(filenames, obsparam, comoving, targetname,
                     print('Target (%s) not an asteroid' % targetname)
                     logging.warning('Target (%s) not an asteroid' % targetname)
                     n = None
-
+                    time.sleep(0.5)
                 if n is None or n == 0:
                     logging.warning('WARNING: No position from Horizons!' +
                                     'Name (%s) correct?' % targetname)

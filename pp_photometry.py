@@ -53,7 +53,8 @@ logging.basicConfig(filename=_pp_conf.log_filename,
 
 
 def curve_of_growth_analysis(filenames, parameters,
-                             display=False, diagnostics=False):
+                             nodeblending=False, display=False,
+                             diagnostics=False):
 
     output = {}
     obsparam = parameters['obsparam']
@@ -78,6 +79,7 @@ def curve_of_growth_analysis(filenames, parameters,
                          'paramfile': _pp_conf.rootpath
                          + '/setup/twentyapertures.sexparam',
                          'aprad': aprads, 'telescope': parameters['telescope'],
+                         'nodeblending': nodeblending,
                          'quiet': False}
 
     extraction = pp_extract.extract_multiframe(filenames, extractparameters)
@@ -339,7 +341,8 @@ def curve_of_growth_analysis(filenames, parameters,
 
 def photometry(filenames, sex_snr, source_minarea, aprad,
                manobjectname, background_only, target_only,
-               telescope, obsparam, display=False,
+               telescope, obsparam, nodeblending=False,
+               display=False,
                diagnostics=False):
     """
     wrapper for photometry analysis
@@ -353,6 +356,7 @@ def photometry(filenames, sex_snr, source_minarea, aprad,
                'target_only': target_only,
                'obsparam': obsparam,
                'telescope': telescope,
+               'nodeblending': nodeblending,
                'quiet': not display}
 
     # do curve-of-growth analysis if aprad not provided
@@ -372,6 +376,7 @@ def photometry(filenames, sex_snr, source_minarea, aprad,
 
             photpar['aprad'] = aprads
             cog = curve_of_growth_analysis(filenames, photpar,
+                                           nodeblending=nodeblending,
                                            display=display,
                                            diagnostics=diagnostics)
             aprad = cog['optimum_aprad']
@@ -442,6 +447,9 @@ if __name__ == '__main__':
     parser.add_argument('-target_only', help='find aperture for target only',
                         action="store_true")
     parser.add_argument('images', help='images to process', nargs='+')
+    parser.add_argument('-nodeblending',
+                        help='deactivate deblending in source extraction',
+                        action="store_true")
 
     args = parser.parse_args()
     sex_snr = float(args.snr)
@@ -450,6 +458,7 @@ if __name__ == '__main__':
     manobjectname = args.target
     background_only = args.background_only
     target_only = args.target_only
+    nodeblending = args.nodeblending
     filenames = args.images
 
     # check if input filenames is actually a list
@@ -477,5 +486,6 @@ if __name__ == '__main__':
 
     phot = photometry(filenames, sex_snr, source_minarea, aprad,
                       manobjectname, background_only, target_only,
-                      telescope, obsparam, display=True,
+                      telescope, obsparam,
+                      nodeblending=nodeblending, display=True,
                       diagnostics=True)
