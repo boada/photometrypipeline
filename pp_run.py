@@ -115,7 +115,7 @@ def run_the_pipeline(filenames, man_targetname, man_filtername,
     # check if there is only one unique instrument
     if len(set(instruments)) > 1:
         print('ERROR: multiple instruments used in dataset: %s' %
-              str(set(instruemnts)))
+              str(set(instruments)))
         logging.error('multiple instruments used in dataset: %s' %
                       str(set(instruments)))
         for i in range(len(filenames)):

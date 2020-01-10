@@ -74,6 +74,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='stacked photometry')
     parser.add_argument('-comoving', help='stack in moving target frame',
                         action='store_true')
+    parser.add_argument("-targetname",
+                        help='moving target name', default=None)
     parser.add_argument('-filter', help='filter name override',
                         default=None)
     parser.add_argument('-method',
@@ -96,12 +98,14 @@ if __name__ == '__main__':
                         nargs='+')
     args = parser.parse_args()
     comoving = args.comoving
+    targetname = args.targetname
     man_filtername = args.filter
     combinemethod = args.method
     fixed_aprad = float(args.fixed_aprad)
     snr = float(args.snr)
     solar = args.solar
-    reject = args.reject[0]
+    #reject = args.reject[0]
+    reject = args.reject
     filenames = args.images
 
     # use current directory as root directory
@@ -136,7 +140,7 @@ if __name__ == '__main__':
 
     # create skycoadd in current directory
     ppcombine_comoving = False
-    targetname = None
+    #targetname = None
     manual_rates = None
     keep_files = False
     combination = pp_combine.combine(filenames, obsparam, ppcombine_comoving,
@@ -222,7 +226,8 @@ if __name__ == '__main__':
     # ------------------- COMOVE
 
     hdulist = fits.open(filenames[0])
-    targetname = hdulist[0].header[obsparam['object']]
+    if comoving and targetname is None:
+        targetname = header[obsparam['object']]
 
     if comoving:
 
@@ -294,7 +299,9 @@ if __name__ == '__main__':
                                              diagnostics=True)
 
     # distill target brightness from database
-    man_targetname = None
+    #man_targetname = None
+    if targetname != header[obsparam['object']]:
+        man_targetname = targetname
     man_offset = [0, 0]
     fixed_targets_file = None
     posfile = None

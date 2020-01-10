@@ -69,6 +69,13 @@ mytelescope_param = {
     'reg_max_mag': 19,
     'reg_search_radius': 0.5,  # deg
     'source_tolerance': 'high',
+    
+    # swarp settings
+    'copy_keywords': ('OBSERVAT,INSTRUME,EXPTIME,OBJECT,' +
+                      'DATE-OBS,TEL_KEYW'),
+    #                        keywords to be copied in image
+    #                        combination using swarp
+    'swarp-config-file': rootpath+'/setup/mytelescope.swarp',
 
     # default catalog settings
     'astrometry_catalogs': ['GAIA'],
